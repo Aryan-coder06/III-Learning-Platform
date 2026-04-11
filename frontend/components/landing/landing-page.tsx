@@ -16,10 +16,10 @@ export function LandingPage() {
       <main>
         <HeroSection />
         <StatsStrip />
+        <PreviewSection />
         <FeaturesSection />
         <WhySection />
         <WorkflowSection />
-        <PreviewSection />
         <TestimonialsSection />
         <CtaSection />
       </main>

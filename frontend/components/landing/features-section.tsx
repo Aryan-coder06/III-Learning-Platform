@@ -1,63 +1,45 @@
-import {
-  BellRing,
-  FileStack,
-  MessageSquareShare,
-  MonitorPlay,
-  PanelsTopLeft,
-  UsersRound,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
-import { SectionHeading } from "@/components/shared/section-heading";
 import { landingFeatures } from "@/lib/mock/landing";
-
-const icons = [
-  UsersRound,
-  MessageSquareShare,
-  FileStack,
-  PanelsTopLeft,
-  MonitorPlay,
-  BellRing,
-];
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="border-b-2 border-foreground/90">
-      <div className="section-shell grid lg:grid-cols-[0.8fr_1.2fr]">
-        <div className="swiss-dots border-b-2 border-foreground/90 py-14 lg:border-b-0 lg:border-r-2 lg:py-20 lg:pr-10">
-          <SectionHeading
-            kicker="Capabilities"
-            title="Six core systems for student collaboration"
-            description="Each module is positioned for a real product flow now, with clean extension points for the future backend and AI service."
-          />
+    <section id="features" className="border-b-[4px] border-foreground bg-background">
+      <div className="grid grid-cols-1 lg:grid-cols-2">
+        <div className="swiss-dots border-foreground bg-secondary p-12 lg:border-r-[4px] lg:p-24">
+          <span className="mb-6 block text-xl font-black uppercase tracking-[0.28em] text-accent">
+            01. System
+          </span>
+          <h2 className="sticky top-32 font-[var(--font-display)] text-5xl font-bold uppercase leading-none tracking-[-0.08em] sm:text-6xl md:text-7xl lg:text-8xl">
+            Capabilities
+            <br />
+            <span className="text-foreground/20">&amp; Functions</span>
+          </h2>
         </div>
 
-        <div className="divide-y-2 divide-foreground/90">
-          {landingFeatures.map((feature, index) => {
-            const Icon = icons[index];
-            return (
-              <article
-                key={feature.title}
-                className="grid gap-6 px-0 py-8 md:grid-cols-[auto_1fr] md:px-0 md:py-10 lg:pl-10"
-              >
-                <div className="flex h-16 w-16 items-center justify-center rounded-[1.4rem] border border-foreground/85 bg-accent text-accent-foreground">
-                  <Icon className="h-6 w-6" />
-                </div>
-                <div className="space-y-3">
-                  <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-                    <h3 className="font-[var(--font-display)] text-3xl font-bold uppercase tracking-[-0.06em]">
-                      {feature.title}
-                    </h3>
-                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-                      {feature.benefit}
-                    </p>
-                  </div>
-                  <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
-                    {feature.description}
-                  </p>
-                </div>
-              </article>
-            );
-          })}
+        <div>
+          {landingFeatures.map((feature, index) => (
+            <article
+              key={feature.title}
+              className="group swiss-card-hover border-b-[4px] border-foreground p-10 transition-colors duration-300 last:border-b-0 hover:bg-accent hover:text-white md:p-12"
+            >
+              <div className="mb-6 flex items-center justify-between">
+                <span className="font-[var(--font-display)] text-4xl font-bold tracking-[-0.06em]">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <ArrowRight className="swiss-card-arrow h-8 w-8 -rotate-45 transition-transform duration-300" />
+              </div>
+              <h3 className="mb-4 font-[var(--font-display)] text-3xl font-bold uppercase tracking-[-0.05em]">
+                {feature.title}
+              </h3>
+              <p className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-accent transition-colors duration-300 group-hover:text-white/80">
+                {feature.benefit}
+              </p>
+              <p className="swiss-copy-fade max-w-xl text-lg leading-relaxed text-foreground/80 transition-colors duration-300">
+                {feature.description}
+              </p>
+            </article>
+          ))}
         </div>
       </div>
     </section>

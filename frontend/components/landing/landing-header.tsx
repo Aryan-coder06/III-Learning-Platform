@@ -1,34 +1,48 @@
 import Link from "next/link";
 
-import { Logo } from "@/components/shared/logo";
-import { Button } from "@/components/ui/button";
 import { landingSections } from "@/lib/constants/site";
 
 export function LandingHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b-2 border-foreground/90 bg-background/90 backdrop-blur-sm">
-      <div className="section-shell flex h-20 items-center justify-between gap-6">
-        <Logo />
+    <header className="sticky top-0 z-50 border-b-[4px] border-foreground bg-background">
+      <div className="section-shell flex h-24 items-center justify-between gap-6">
+        <Link href="/" className="flex items-center gap-4">
+          <div className="h-9 w-9 bg-accent" />
+          <div className="font-[var(--font-display)] text-3xl font-bold uppercase tracking-[-0.08em]">
+            StudySync AI
+          </div>
+        </Link>
 
-        <nav className="hidden items-center gap-8 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground lg:flex">
+        <nav className="hidden gap-12 font-bold text-sm uppercase tracking-[0.22em] md:flex">
           {landingSections.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="hover:text-foreground"
+              className="group relative overflow-hidden"
             >
-              {item.label}
+              <span className="block translate-y-0 transition-transform duration-200 ease-out group-hover:-translate-y-full">
+                {item.label}
+              </span>
+              <span className="absolute left-0 top-full block text-accent transition-transform duration-200 ease-out group-hover:-translate-y-full">
+                {item.label}
+              </span>
             </Link>
           ))}
         </nav>
 
         <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" className="hidden md:inline-flex">
-            <Link href="/dashboard">Explore Dashboard</Link>
-          </Button>
-          <Button asChild variant="accent">
-            <Link href="/login">Sign In</Link>
-          </Button>
+          <Link
+            href="/login"
+            className="inline-flex h-12 items-center bg-accent px-5 text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-black md:hidden"
+          >
+            Sign In
+          </Link>
+          <Link
+            href="/login"
+            className="hidden h-14 items-center bg-accent px-10 text-sm font-medium uppercase tracking-[0.18em] text-white hover:bg-black md:inline-flex"
+          >
+            Get Started
+          </Link>
         </div>
       </div>
     </header>

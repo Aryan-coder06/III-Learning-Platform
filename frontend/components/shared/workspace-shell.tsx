@@ -14,16 +14,16 @@ export function WorkspaceShell({
 }: WorkspaceShellProps) {
   return (
     <div className="page-noise min-h-screen bg-background px-4 py-4 md:px-5 lg:px-6">
-      <div className="mx-auto flex max-w-[1600px] gap-5">
+      <div className="mx-auto flex max-w-[1620px] gap-5">
         <DesktopSidebar />
 
         <div className="min-w-0 flex-1">
-          <div className="rounded-[2.2rem] border border-foreground/12 bg-card/90 shadow-[0_28px_72px_rgba(19,19,19,0.08)]">
+          <div className="overflow-hidden rounded-[2.25rem] border border-foreground/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.92))] shadow-[0_28px_72px_rgba(19,19,19,0.08)]">
             <header className="space-y-6 border-b border-border/70 px-5 py-6 md:px-8 md:py-8">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                <div className="space-y-3">
+              <div className="grid gap-5 xl:grid-cols-[1.25fr_0.75fr] xl:items-start">
+                <div className="rounded-[1.9rem] border border-border/70 bg-[linear-gradient(135deg,rgba(255,48,0,0.08),transparent_45%),rgba(255,255,255,0.9)] p-6">
                   <Badge variant="accent">Workspace</Badge>
-                  <div className="space-y-2">
+                  <div className="mt-4 space-y-3">
                     <h1 className="font-[var(--font-display)] text-4xl font-bold uppercase tracking-[-0.08em] md:text-5xl">
                       {title}
                     </h1>
@@ -33,7 +33,7 @@ export function WorkspaceShell({
                   </div>
                 </div>
 
-                <div className="rounded-[1.7rem] border border-border/70 bg-secondary/50 px-5 py-4 text-sm leading-6 text-muted-foreground xl:max-w-xs">
+                <div className="rounded-[1.9rem] border border-border/70 bg-secondary/45 p-5 text-sm leading-7 text-muted-foreground">
                   Node + Express, Socket.IO, MongoDB, FastAPI, video sessions, and
                   collaborative canvas are scaffolded for the next stages.
                 </div>

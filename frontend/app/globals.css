@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f1e8;
-  --foreground: #131313;
-  --card: #fffdf8;
+  --background: #ffffff;
+  --foreground: #111111;
+  --card: #ffffff;
   --card-foreground: #131313;
-  --popover: #fffdf8;
+  --popover: #ffffff;
   --popover-foreground: #131313;
   --primary: #131313;
-  --primary-foreground: #fff9ef;
-  --secondary: #ece4d8;
+  --primary-foreground: #fffdf8;
+  --secondary: #f2f2f2;
   --secondary-foreground: #131313;
-  --muted: #ece4d8;
-  --muted-foreground: #665f54;
+  --muted: #f2f2f2;
+  --muted-foreground: #5f5f5f;
   --accent: #ff3000;
-  --accent-foreground: #fff9ef;
+  --accent-foreground: #ffffff;
   --accent-soft: #ffe1d8;
   --destructive: #c93c16;
   --border: #131313;
@@ -77,9 +77,7 @@ html {
 
 body {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(255, 48, 0, 0.08), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(245, 241, 232, 0.95));
+  background: var(--background);
   color: var(--foreground);
   font-family: var(--font-body), sans-serif;
   text-rendering: optimizeLegibility;
@@ -113,7 +111,7 @@ select {
   inset: 0;
   pointer-events: none;
   content: "";
-  opacity: 0.02;
+  opacity: 0.015;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
 }
 
@@ -130,7 +128,7 @@ select {
 }
 
 .section-shell {
-  @apply mx-auto w-full max-w-7xl px-5 md:px-8 lg:px-10;
+  @apply mx-auto w-full max-w-[1600px] px-5 md:px-8 lg:px-10;
 }
 
 .section-kicker {
@@ -154,6 +152,96 @@ select {
   box-shadow: var(--shadow-soft);
 }
 
+.swiss-rise {
+  animation: swiss-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.swiss-float {
+  animation: swiss-float 6s ease-in-out infinite;
+}
+
+.swiss-drift {
+  animation: swiss-drift 5s ease-in-out infinite;
+}
+
+.swiss-card-hover {
+  transition:
+    background-color 240ms ease,
+    color 240ms ease,
+    transform 240ms ease,
+    border-color 240ms ease;
+}
+
+.swiss-card-hover:hover {
+  transform: translateY(-6px);
+}
+
+.swiss-card-hover:hover .swiss-card-arrow {
+  transform: rotate(0deg);
+}
+
+.swiss-card-hover:hover .swiss-card-frame {
+  transform: scale(1.03);
+}
+
+.swiss-card-hover:hover .swiss-copy-fade {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.swiss-stat-plus {
+  opacity: 0;
+  transform: rotate(0deg);
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+.group:hover .swiss-stat-plus {
+  opacity: 1;
+  transform: rotate(90deg);
+}
+
+.swiss-dark-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+@keyframes swiss-rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes swiss-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes swiss-drift {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(12px);
+  }
+}
+
 .grid-divider > * {
   border-top: 1px solid rgba(19, 19, 19, 0.12);
   border-left: 1px solid rgba(19, 19, 19, 0.12);
@@ -170,5 +258,17 @@ select {
 
   .grid-divider > *:first-child {
     border-top: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swiss-rise,
+  .swiss-float,
+  .swiss-drift {
+    animation: none;
+  }
+
+  html {
+    scroll-behavior: auto;
   }
 }

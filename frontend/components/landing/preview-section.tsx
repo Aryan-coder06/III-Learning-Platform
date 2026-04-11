@@ -1,130 +1,104 @@
-import Image from "next/image";
-import { CalendarClock, Files, MessageSquareMore, PanelsTopLeft, UsersRound, Video } from "lucide-react";
-
-import { SectionHeading } from "@/components/shared/section-heading";
-import { Card } from "@/components/ui/card";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 export function PreviewSection() {
   return (
-    <section id="preview" className="border-b-2 border-foreground/90 py-16 md:py-20">
-      <div className="section-shell space-y-10">
-        <SectionHeading
-          kicker="Product preview"
-          title="A dashboard built for rooms, not generic admin tables"
-          description="The UI is framed as a collaborative control center with modules that map directly to the first product features."
-        />
+    <section id="preview" className="border-b-[4px] border-foreground bg-background">
+      <div className="section-shell px-5 py-24 md:px-8 md:py-32">
+        <div className="mb-20 text-center">
+          <h2 className="font-[var(--font-display)] text-5xl font-bold uppercase tracking-[-0.08em] md:text-7xl lg:text-8xl">
+            Product Preview
+          </h2>
+          <p className="mt-5 text-lg leading-relaxed text-foreground/60 md:text-2xl">
+            The landing page now carries the same visual grammar as the original
+            Swiss theme, but the content is rebuilt around StudySync AI.
+          </p>
+        </div>
 
-        <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-          <Card className="border-2 border-foreground/85 bg-card p-6">
-            <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-              <div className="space-y-4">
-                <div className="rounded-[1.8rem] border border-border/70 bg-secondary/45 p-5">
-                  <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    <UsersRound className="h-4 w-4 text-accent" />
-                    Room cards
-                  </div>
-                  <div className="mt-4 space-y-3">
-                    {["DSA Sprint", "OS Midsem Prep", "Capstone Sync"].map((room) => (
-                      <div key={room} className="rounded-2xl border border-border/70 bg-card p-4">
-                        <p className="font-semibold">{room}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Members, topic focus, and session timing live here.
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+        <div className="grid grid-cols-1 gap-px border-[4px] border-foreground bg-foreground lg:grid-cols-2">
+          <Link
+            href="/dashboard"
+            className="group swiss-card-hover flex flex-col items-center justify-between bg-background p-10 md:p-16"
+          >
+            <div className="mb-12 flex aspect-square w-full items-center justify-center overflow-hidden border-[4px] border-foreground bg-background transition-colors duration-300 group-hover:border-white">
+              <div className="swiss-card-frame w-full max-w-[420px] bg-[#111317] p-6 text-white transition-transform duration-300">
+                <div className="font-[var(--font-display)] text-4xl font-bold tracking-[-0.06em]">
+                  Room
+                  <span className="text-accent"> intelligence</span>
                 </div>
-
-                <div className="rounded-[1.8rem] border border-border/70 bg-sidebar p-5 text-sidebar-foreground">
-                  <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/55">
-                    <MessageSquareMore className="h-4 w-4 text-accent" />
-                    Chat preview
-                  </div>
-                  <div className="mt-4 space-y-3 text-sm leading-6">
-                    <div className="rounded-2xl bg-sidebar-foreground/8 p-3">
-                      “Review the DP sheet before tonight’s call.”
-                    </div>
-                    <div className="rounded-2xl bg-accent px-3 py-2 text-accent-foreground">
-                      “Uploaded the updated outline and file links.”
-                    </div>
-                  </div>
+                <p className="mt-4 text-base text-white/60">
+                  A dashboard surface for room health, unread activity, shared
+                  documents, and upcoming study sessions.
+                </p>
+                <div className="mt-6 border-t border-white/15 pt-4 font-mono text-xs text-white/50">
+                  {">"} syncing room activity...
                 </div>
-              </div>
-
-              <div className="grid gap-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-[1.8rem] border border-border/70 bg-card p-5">
-                    <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                      <Files className="h-4 w-4 text-accent" />
-                      Shared files
-                    </div>
-                    <div className="mt-5 rounded-[1.4rem] border border-border/70 bg-secondary/50 p-4">
-                      <Image
-                        src="/theme/placeholder.svg"
-                        alt="Document placeholder"
-                        width={220}
-                        height={140}
-                        className="mx-auto h-24 w-auto"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="rounded-[1.8rem] border border-border/70 bg-card p-5">
-                    <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                      <CalendarClock className="h-4 w-4 text-accent" />
-                      Reminders
-                    </div>
-                    <div className="mt-4 space-y-3 text-sm">
-                      <div className="rounded-2xl border border-border/70 p-3">
-                        Session starts in 45 minutes
-                      </div>
-                      <div className="rounded-2xl border border-border/70 p-3">
-                        2 unread updates across rooms
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-[1.8rem] border border-border/70 bg-secondary/45 p-5">
-                    <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                      <PanelsTopLeft className="h-4 w-4 text-accent" />
-                      Whiteboard
-                    </div>
-                    <div className="mt-4 rounded-[1.5rem] border border-border/70 bg-card p-4">
-                      <div className="grid grid-cols-6 gap-2">
-                        {Array.from({ length: 12 }).map((_, index) => (
-                          <div
-                            key={index}
-                            className={`h-6 rounded-full ${
-                              index % 4 === 0
-                                ? "bg-accent"
-                                : index % 3 === 0
-                                  ? "bg-secondary"
-                                  : "bg-sidebar"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-[1.8rem] border border-border/70 bg-secondary/45 p-5">
-                    <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                      <Video className="h-4 w-4 text-accent" />
-                      Session module
-                    </div>
-                    <div className="mt-4 flex h-[176px] items-end rounded-[1.5rem] border border-border/70 bg-sidebar p-4">
-                      <div className="w-full rounded-[1.2rem] bg-sidebar-foreground/8 p-4 text-sm text-sidebar-foreground/75">
-                        Upcoming room call with agenda, participants, and join action
-                        lives here.
-                      </div>
-                    </div>
-                  </div>
+                <div className="mt-6 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.14em]">
+                  {["Rooms", "Messages", "Files", "Sessions", "Reminders"].map(
+                    (item) => (
+                      <span
+                        key={item}
+                        className="rounded-full border border-white/25 px-3 py-1"
+                      >
+                        {item}
+                      </span>
+                    ),
+                  )}
                 </div>
               </div>
             </div>
-          </Card>
+
+            <div className="w-full text-center">
+              <h3 className="font-[var(--font-display)] text-4xl font-bold uppercase tracking-[-0.05em] md:text-5xl">
+                Room Intelligence
+              </h3>
+              <p className="swiss-copy-fade mx-auto mt-6 max-w-2xl text-xl leading-relaxed text-foreground/60 md:text-2xl">
+                Study rooms, files, discussion, and sessions become visible inside
+                one focused workspace instead of across disconnected tabs.
+              </p>
+            </div>
+
+            <div className="mt-12 flex items-center gap-3 text-lg font-bold uppercase tracking-[0.22em] text-accent transition-colors group-hover:text-white">
+              Explore
+              <ArrowRight className="h-5 w-5" />
+            </div>
+          </Link>
+
+          <Link
+            href="/login"
+            className="group swiss-card-hover flex flex-col items-center justify-between bg-accent p-10 text-white md:p-16 hover:bg-black"
+          >
+            <div className="mb-12 flex aspect-square w-full items-center justify-center overflow-hidden border-[4px] border-background bg-background transition-colors duration-300 group-hover:border-accent">
+              <div className="swiss-card-frame relative flex h-full w-full max-w-[420px] items-center justify-center bg-[#16171b] transition-transform duration-300">
+                <div className="absolute top-10 flex h-24 w-24 items-center justify-center rounded-2xl bg-white/14">
+                  <div className="h-10 w-10 rounded-sm bg-white/18" />
+                </div>
+                <div className="absolute bottom-12 left-12 right-12 rounded-[2rem] border border-white/10 bg-white/6 p-5 text-center">
+                  <p className="font-[var(--font-display)] text-3xl font-bold tracking-[-0.06em] text-white/82">
+                    Your Team Room Stack
+                  </p>
+                  <p className="mt-3 text-base text-white/42">
+                    Login, rooms, files, calls, whiteboards, and reminders.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full text-center">
+              <h3 className="font-[var(--font-display)] text-4xl font-bold uppercase tracking-[-0.05em] md:text-5xl">
+                Workspace Launch
+              </h3>
+              <p className="swiss-copy-fade mx-auto mt-6 max-w-2xl text-xl leading-relaxed text-white/82 md:text-2xl">
+                The right-side landing visuals now preview the product dashboard
+                instead of generic geometric filler.
+              </p>
+            </div>
+
+            <div className="mt-12 flex items-center gap-3 text-lg font-bold uppercase tracking-[0.22em] text-white">
+              Open
+              <ArrowRight className="h-5 w-5" />
+            </div>
+          </Link>
         </div>
       </div>
     </section>

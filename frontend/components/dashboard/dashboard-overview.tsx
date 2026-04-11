@@ -58,16 +58,31 @@ export function DashboardOverview() {
       <DashboardHeader name={demoUser.name} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        {dashboardStats.map((stat) => (
-          <Card key={stat.label} className="bg-card">
+        {dashboardStats.map((stat, index) => (
+          <Card
+            key={stat.label}
+            className={
+              index === 0
+                ? "border-none bg-sidebar text-sidebar-foreground shadow-[0_22px_34px_rgba(19,19,19,0.16)]"
+                : index === 1
+                  ? "border-none bg-accent text-accent-foreground shadow-[0_22px_34px_rgba(255,48,0,0.14)]"
+                  : "bg-card"
+            }
+          >
             <CardContent className="space-y-2 p-5">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <p
+                className={`text-sm font-semibold uppercase tracking-[0.18em] ${
+                  index < 2 ? "text-current/72" : "text-muted-foreground"
+                }`}
+              >
                 {stat.label}
               </p>
               <div className="font-[var(--font-display)] text-4xl font-bold tracking-[-0.08em]">
                 {stat.value}
               </div>
-              <p className="text-sm text-muted-foreground">{stat.detail}</p>
+              <p className={`text-sm ${index < 2 ? "text-current/82" : "text-muted-foreground"}`}>
+                {stat.detail}
+              </p>
             </CardContent>
           </Card>
         ))}
@@ -91,30 +106,55 @@ export function DashboardOverview() {
                 Join Room
               </Button>
             </div>
-            <div className="grid gap-4 xl:grid-cols-3">
-              {joinedRooms.map((room) => (
-                <div
-                  key={room.name}
-                  className="rounded-[1.7rem] border border-border/70 bg-secondary/45 p-5"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <h4 className="font-semibold">{room.name}</h4>
-                    <Badge variant="subtle">{room.status}</Badge>
+            <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+              <div className="grid gap-4">
+                {joinedRooms.map((room) => (
+                  <div
+                    key={room.name}
+                    className="rounded-[1.7rem] border border-border/70 bg-secondary/45 p-5"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <h4 className="font-semibold">{room.name}</h4>
+                      <Badge variant="subtle">{room.status}</Badge>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                      {room.topic}
+                    </p>
+                    <div className="mt-6 flex flex-wrap gap-4 text-sm text-muted-foreground">
+                      <p>{room.members} members</p>
+                      <p>{room.nextSession}</p>
+                    </div>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                    {room.topic}
+                ))}
+              </div>
+
+              <div className="rounded-[1.9rem] border border-border/70 bg-sidebar p-5 text-sidebar-foreground">
+                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/60">
+                  Focus room
+                </p>
+                <div className="mt-5 rounded-[1.5rem] border border-sidebar-foreground/10 bg-sidebar-foreground/[0.04] p-5">
+                  <p className="font-[var(--font-display)] text-3xl font-bold uppercase tracking-[-0.06em]">
+                    {joinedRooms[0]?.name}
                   </p>
-                  <div className="mt-6 space-y-2 text-sm text-muted-foreground">
-                    <p>{room.members} members</p>
-                    <p>{room.nextSession}</p>
+                  <p className="mt-3 text-sm leading-7 text-sidebar-foreground/64">
+                    {joinedRooms[0]?.topic}
+                  </p>
+                </div>
+                <div className="mt-5 space-y-3">
+                  <div className="rounded-[1.35rem] border border-sidebar-foreground/10 bg-black/20 p-4 text-sm text-sidebar-foreground/72">
+                    Next session: {joinedRooms[0]?.nextSession}
+                  </div>
+                  <div className="rounded-[1.35rem] border border-sidebar-foreground/10 bg-black/20 p-4 text-sm text-sidebar-foreground/72">
+                    Live room checklist, pinned notes, and attendance summary can
+                    sit here next.
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-none bg-sidebar text-sidebar-foreground shadow-[0_22px_34px_rgba(19,19,19,0.16)]">
           <CardContent className="p-6">
             <PanelHeader
               icon={MessageSquareMore}
@@ -125,7 +165,7 @@ export function DashboardOverview() {
               {conversationPreview.map((thread) => (
                 <div
                   key={thread.room}
-                  className="rounded-[1.5rem] border border-border/70 bg-secondary/40 p-4"
+                  className="rounded-[1.5rem] border border-sidebar-foreground/10 bg-sidebar-foreground/[0.05] p-4"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <p className="font-semibold">{thread.room}</p>
@@ -133,10 +173,10 @@ export function DashboardOverview() {
                       {thread.unread} unread
                     </Badge>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                  <p className="mt-3 text-sm leading-6 text-sidebar-foreground/68">
                     {thread.sender}: {thread.lastMessage}
                   </p>
-                  <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/46">
                     {thread.time}
                   </p>
                 </div>
@@ -188,7 +228,7 @@ export function DashboardOverview() {
         </Card>
 
         <div className="grid gap-6">
-          <Card>
+          <Card className="overflow-hidden border border-border/70 bg-[linear-gradient(135deg,rgba(255,48,0,0.08),transparent_40%),white]">
             <CardContent className="p-6">
               <PanelHeader
                 icon={PanelsTopLeft}
@@ -221,7 +261,7 @@ export function DashboardOverview() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border border-border/70 bg-[linear-gradient(180deg,rgba(242,242,242,0.65),white)]">
             <CardContent className="p-6">
               <PanelHeader
                 icon={BellRing}
@@ -245,7 +285,7 @@ export function DashboardOverview() {
       </div>
 
       <div className="grid gap-6 2xl:grid-cols-[0.95fr_1.05fr]">
-        <Card>
+        <Card className="border border-border/70 bg-[linear-gradient(180deg,rgba(242,242,242,0.55),white)]">
           <CardContent className="p-6">
             <PanelHeader
               icon={Video}
@@ -275,7 +315,7 @@ export function DashboardOverview() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border border-border/70 bg-[linear-gradient(135deg,rgba(255,48,0,0.06),transparent_38%),white]">
           <CardContent className="p-6">
             <PanelHeader
               icon={CalendarClock}

@@ -6,7 +6,6 @@ export const siteConfig = {
 
 export const landingSections = [
   { href: "#features", label: "Features" },
-  { href: "#why-studysync", label: "Why StudySync" },
+  { href: "#why-studysync", label: "Benefits" },
   { href: "#workflow", label: "Workflow" },
-  { href: "#preview", label: "Preview" },
 ];

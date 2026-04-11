@@ -1,8 +1,12 @@
+node_modules
 frontend/node_modules
 frontend/.next
 backend/node-api/node_modules
 __pycache__
 .DS_Store
-
+pnpm-lock.yaml
+frontend/pnpm-lock.yaml
+Swiss _ Design Prompts.html
+Swiss _ Design Prompts_files/
 
 
