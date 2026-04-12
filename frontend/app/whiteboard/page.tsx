@@ -5,7 +5,7 @@ export default function WhiteboardPage() {
   return (
     <WorkspaceShell
       title="Whiteboard"
-      description="Draw, sketch, and diagram your ideas on the collaborative canvas."
+      description="Collaborative sketching, board state sync, and live cursor sessions will attach to this canvas route."
     >
       <WhiteboardCanvas />
     </WorkspaceShell>
