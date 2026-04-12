@@ -8,36 +8,42 @@ export const landingStats = [
 export const landingFeatures = [
   {
     title: "Study Rooms",
+    href: "/rooms",
     benefit: "Focus every topic in a dedicated workspace.",
     description:
       "Create subject-based rooms for exam prep, project execution, or club planning with a shared context from day one.",
   },
   {
     title: "Real-Time Messaging",
+    href: "/messages",
     benefit: "Keep discussion attached to the work.",
     description:
       "Move away from scattered chats and keep live conversation inside the room where decisions, questions, and updates belong.",
   },
   {
     title: "Document Sharing",
+    href: "/documents",
     benefit: "Centralize notes, slides, and references.",
     description:
       "Upload and organize study material so every member can access the same resources without version confusion.",
   },
   {
     title: "Virtual Whiteboard",
+    href: "/whiteboard",
     benefit: "Sketch ideas while solving together.",
     description:
       "Map concepts, break down problems, and explain tough topics visually inside a shared board space.",
   },
   {
     title: "Video Conferencing",
+    href: "/sessions",
     benefit: "Turn a room into a live session instantly.",
     description:
       "Schedule and join face-to-face study blocks, discussions, and collaborative project reviews without leaving the workspace.",
   },
   {
     title: "Notifications and Reminders",
+    href: "/notifications",
     benefit: "Stay aligned on deadlines and sessions.",
     description:
       "Track upcoming reviews, unread updates, and missed activity so nothing slips between messages and meetings.",

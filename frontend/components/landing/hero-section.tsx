@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Plus } from "lucide-react";
 
 const builtFor = [
@@ -22,7 +23,7 @@ export function HeroSection() {
       <div className="section-shell grid min-h-[80vh] grid-cols-1 lg:grid-cols-12">
         <div className="flex flex-col justify-between border-b-[4px] border-foreground p-6 pt-24 md:p-12 lg:col-span-8 lg:border-b-0 lg:border-r-[4px]">
           <div className="swiss-rise space-y-8">
-            <h1 className="font-[var(--font-display)] text-[clamp(3.25rem,10vw,9.2rem)] font-bold uppercase leading-[0.85] tracking-[-0.1em]">
+            <h1 className="max-w-[10ch] font-[var(--font-display)] text-[clamp(3.25rem,9vw,8.5rem)] font-bold uppercase leading-[0.82] tracking-[-0.1em]">
               Collaborative
               <br />
               Study Room
@@ -55,23 +56,21 @@ export function HeroSection() {
         </div>
 
         <div className="flex flex-col lg:col-span-4">
-          <div className="swiss-grid-pattern relative flex min-h-[460px] flex-1 overflow-hidden border-b-[4px] border-foreground bg-secondary p-8 md:p-12">
-            <div className="absolute left-10 top-8 h-[74%] w-28 bg-black swiss-rise md:w-32" />
-            <div
-              className="absolute bottom-0 left-[44%] h-[46%] w-2 bg-black swiss-rise"
-              style={{ animationDelay: "120ms" }}
-            />
-            <div
-              className="absolute left-[49%] top-[58%] h-16 w-16 rotate-45 border-[4px] border-foreground swiss-rise md:h-20 md:w-20"
-              style={{ animationDelay: "220ms" }}
-            />
-            <div
-              className="absolute right-[11%] top-[28%] h-32 w-32 rounded-full bg-accent shadow-[0_0_0_8px_rgba(255,48,0,0.1)] swiss-float md:h-36 md:w-36"
-            />
-            <div className="absolute right-[28%] top-[50%] h-24 w-1 bg-accent swiss-drift" />
+          <div className="swiss-grid-pattern relative flex min-h-[460px] flex-1 flex-col overflow-hidden border-b-[4px] border-foreground bg-secondary">
+            <div className="relative flex flex-1 items-center justify-center p-4 md:p-6">
+              <div className="relative aspect-[4/5] w-full overflow-hidden border-[4px] border-foreground bg-background">
+                <Image
+                  src="/start.png"
+                  alt="StudySync product preview"
+                  fill
+                  priority
+                  className="object-cover"
+                />
+              </div>
+            </div>
 
             <div
-              className="relative mt-auto w-full border-[4px] border-foreground bg-background p-4 swiss-rise"
+              className="relative mt-auto w-full border-t-[4px] border-foreground bg-background p-4 swiss-rise"
               style={{ animationDelay: "180ms" }}
             >
               <div className="mb-4 flex items-center justify-between">
