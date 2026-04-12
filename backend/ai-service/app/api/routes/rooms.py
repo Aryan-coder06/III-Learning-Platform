@@ -44,6 +44,11 @@ def upload_room_document(
   )
 
 
+@router.post("/{room_id}/documents/sync", response_model=DocumentRecord)
+def sync_document(room_id: str, payload: DocumentRecord):
+  return document_service.sync_document(room_id, payload)
+
+
 @router.post("/{room_id}/documents/{document_id}/process", response_model=DocumentRecord)
 def process_room_document(room_id: str, document_id: str, background_tasks: BackgroundTasks):
   document = document_service._get_document(room_id, document_id)

@@ -12,3 +12,7 @@ Swiss _ Design Prompts_files/
 .env.*
 backend/ai-service/.env
 
+# Local Storage (Migrated to Cloudinary/MongoDB)
+backend/ai-service/storage/
+backend/node-api/uploads/
+

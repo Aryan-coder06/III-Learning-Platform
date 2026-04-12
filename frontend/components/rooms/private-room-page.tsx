@@ -719,7 +719,7 @@ export function PrivateRoomPage({ roomId }: { roomId: string }) {
         </Card>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[18rem_minmax(0,1.3fr)_24rem]">
+      <div className="grid gap-4 xl:grid-cols-[18rem_minmax(0,1fr)]">
         <div className="space-y-4">
           <Card className="border border-border/70">
             <CardContent className="space-y-4 p-4">
@@ -799,87 +799,6 @@ export function PrivateRoomPage({ roomId }: { roomId: string }) {
           </Card>
         </div>
 
-        <Card className="border border-border/70">
-          <CardContent className="flex h-[calc(100vh-19rem)] min-h-[36rem] flex-col p-0">
-            <div className="border-b border-border/70 px-5 py-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="accent">Live Discussion</Badge>
-                    <Badge variant="subtle">{messages.length} messages</Badge>
-                  </div>
-                  <h3 className="mt-3 font-[var(--font-display)] text-3xl font-bold uppercase tracking-[-0.06em]">
-                    Chat-first room
-                  </h3>
-                </div>
-                <div className="max-w-sm rounded-[1rem] border border-border/70 bg-secondary/45 px-4 py-3 text-sm leading-6 text-muted-foreground">
-                  Tag <span className="font-semibold text-foreground">@SYNC_BOT</span> in this thread for grounded, tutor-like answers based on room uploads.
-                </div>
-              </div>
-            </div>
-
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
-              {messages.length > 0 ? (
-                messages.map((message) => (
-                  <MessageBubble
-                    key={message.messageId}
-                    message={message}
-                    currentUserId={identity.userId}
-                  />
-                ))
-              ) : (
-                <div className="flex h-full items-center justify-center text-center">
-                  <div className="max-w-md space-y-3">
-                    <Badge variant="subtle">Start the room</Badge>
-                    <h4 className="font-[var(--font-display)] text-3xl font-bold uppercase tracking-[-0.05em]">
-                      No messages yet
-                    </h4>
-                    <p className="text-sm leading-6 text-muted-foreground">
-                      Start the group discussion here. Once resources are uploaded, mention @SYNC_BOT directly in chat to get grounded room help.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {botTyping ? (
-                <div className="max-w-[86%] rounded-[1.35rem] border border-sidebar bg-sidebar px-4 py-3 text-sidebar-foreground">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold">SYNC_BOT</span>
-                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/56">
-                      Thinking
-                    </span>
-                  </div>
-                  <p className="mt-3 text-sm leading-6 text-sidebar-foreground/76">
-                    Retrieving room materials and preparing a grounded reply...
-                  </p>
-                </div>
-              ) : null}
-
-              <div ref={messagesEndRef} />
-            </div>
-
-            <form className="border-t border-border/70 px-4 py-4" onSubmit={handleSendMessage}>
-              <div className="rounded-[1.35rem] border border-border/70 bg-secondary/20 p-3">
-                <Textarea
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                  placeholder="Chat with the room, or try: @SYNC_BOT explain deadlock simply from the uploaded notes."
-                  className="min-h-[110px] border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
-                />
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    Human messages and bot replies are stored in room history for everyone who joins later.
-                  </p>
-                  <Button type="submit" variant="dark">
-                    <SendHorizontal className="h-4 w-4" />
-                    Send
-                  </Button>
-                </div>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
             {[
@@ -957,6 +876,91 @@ export function PrivateRoomPage({ roomId }: { roomId: string }) {
             </Card>
           ) : null}
         </div>
+
+        <Card className="border border-border/70 xl:col-span-full">
+          <CardContent className="flex h-[calc(100vh-19rem)] min-h-[38rem] flex-col p-0">
+            <div className="border-b border-border/70 px-5 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="accent">Live Discussion</Badge>
+                    <Badge variant="subtle">{messages.length} messages</Badge>
+                  </div>
+                  <h3 className="mt-3 font-[var(--font-display)] text-3xl font-bold uppercase tracking-[-0.06em]">
+                    Chat-first room
+                  </h3>
+                </div>
+                <div className="max-w-sm rounded-[1rem] border border-border/70 bg-secondary/45 px-4 py-3 text-sm leading-6 text-muted-foreground">
+                  Tag <span className="font-semibold text-foreground">@SYNC_BOT</span> in this thread for grounded, tutor-like answers based on room uploads.
+                </div>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-6">
+              {messages.length > 0 ? (
+                <div className="flex flex-col gap-4">
+                  {messages.map((message) => (
+                    <MessageBubble
+                      key={message.messageId}
+                      message={message}
+                      currentUserId={identity.userId}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex h-full items-center justify-center text-center">
+                  <div className="max-w-md space-y-3">
+                    <Badge variant="subtle">Start the room</Badge>
+                    <h4 className="font-[var(--font-display)] text-3xl font-bold uppercase tracking-[-0.05em]">
+                      No messages yet
+                    </h4>
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      Start the group discussion here. Once resources are uploaded, mention @SYNC_BOT directly in chat to get grounded room help.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {botTyping ? (
+                <div className="max-w-[86%] rounded-[1.35rem] border border-sidebar bg-sidebar px-4 py-3 text-sidebar-foreground">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold">SYNC_BOT</span>
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/56">
+                      Thinking
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-sidebar-foreground/76">
+                    Retrieving room materials and preparing a grounded reply...
+                  </p>
+                </div>
+              ) : null}
+
+              <div ref={messagesEndRef} className="h-2" />
+            </div>
+
+            <div className="mt-auto border-t border-border/70 bg-white px-4 py-4">
+              <form onSubmit={handleSendMessage}>
+                <div className="rounded-[1.35rem] border border-border/70 bg-secondary/20 p-3">
+                  <Textarea
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
+                    placeholder="Chat with the room, or try: @SYNC_BOT explain deadlock simply from the uploaded notes."
+                    className="min-h-[100px] border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+                  />
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <p className="hidden text-xs leading-5 text-muted-foreground sm:block lg:max-w-[240px] xl:max-w-none">
+                      Human messages and bot replies are stored in room history for everyone who joins later.
+                    </p>
+                    <Button type="submit" variant="dark" className="ml-auto shrink-0">
+                      <SendHorizontal className="h-4 w-4" />
+                      Send
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

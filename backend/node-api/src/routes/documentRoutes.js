@@ -1,11 +1,12 @@
 const express = require("express");
 const multer = require("multer");
+const { storage } = require("../config/cloudinary");
 
 const documentController = require("../controllers/documentController");
 
 const router = express.Router();
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage: storage,
   limits: {
     fileSize: 25 * 1024 * 1024,
   },

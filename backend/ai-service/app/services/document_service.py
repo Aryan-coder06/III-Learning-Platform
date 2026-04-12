@@ -1,6 +1,9 @@
+import os
+import tempfile
 from datetime import datetime, timezone
 from uuid import uuid4
 
+import httpx
 import pdfplumber
 from fastapi import HTTPException, UploadFile
 
@@ -12,6 +15,7 @@ from app.services.embeddings import embedding_service
 from app.services.storage import storage_service
 from app.services.vector_store import vector_id_from_chunk_id, vector_store
 from app.services.room_service import room_service
+from app.schemas.document import DocumentRecord
 
 logger = get_logger(__name__)
 
@@ -19,6 +23,38 @@ logger = get_logger(__name__)
 class DocumentService:
   def __init__(self):
     self.settings = get_settings()
+
+  def sync_document(self, room_id: str, payload: DocumentRecord) -> dict:
+    if not mongo_service.is_available():
+      raise HTTPException(status_code=503, detail="MongoDB is unavailable.")
+
+    room_service.get_room(room_id)
+    
+    # Use the existing data from payload
+    record = payload.model_dump()
+    
+    # Ensure upload_time is a datetime object for MongoDB
+    if not record.get("upload_time"):
+      record["upload_time"] = datetime.now(timezone.utc)
+    elif isinstance(record["upload_time"], str):
+      try:
+        record["upload_time"] = datetime.fromisoformat(record["upload_time"].replace("Z", "+00:00"))
+      except ValueError:
+        record["upload_time"] = datetime.now(timezone.utc)
+
+    mongo_service.documents.update_one(
+      {"document_id": record["document_id"]},
+      {"$set": record},
+      upsert=True
+    )
+    
+    mongo_service.rooms.update_one(
+      {"room_id": room_id},
+      {"$set": {"updated_at": datetime.now(timezone.utc)}},
+    )
+    
+    logger.info("Synced document %s for room %s", record["document_id"], room_id)
+    return record
 
   def upload_document(self, room_id: str, upload: UploadFile, uploaded_by: str) -> dict:
     if not mongo_service.is_available():
@@ -159,19 +195,41 @@ class DocumentService:
 
     return document
 
-  def _extract_pdf_pages(self, relative_path: str) -> list[dict]:
-    file_path = storage_service.resolve_path(relative_path)
+  def _extract_pdf_pages(self, file_path_or_url: str) -> list[dict]:
     pages: list[dict] = []
 
+    if file_path_or_url.startswith(("http://", "https://")):
+      # Handle Cloudinary URL
+      with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+        tmp_path = tmp.name
+        try:
+          with httpx.stream("GET", file_path_or_url) as response:
+            if response.status_code != 200:
+              raise HTTPException(status_code=400, detail=f"Failed to download PDF from {file_path_or_url}")
+            for chunk in response.iter_bytes():
+              tmp.write(chunk)
+          tmp.close() # Ensure content is flushed
+          pages = self._parse_pdf_file(tmp_path)
+        finally:
+          if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+    else:
+      # Handle local file path
+      file_path = storage_service.resolve_path(file_path_or_url)
+      pages = self._parse_pdf_file(str(file_path))
+
+    if not pages:
+      raise HTTPException(status_code=400, detail="No extractable text found in the PDF.")
+
+    return pages
+
+  def _parse_pdf_file(self, file_path: str) -> list[dict]:
+    pages: list[dict] = []
     with pdfplumber.open(file_path) as pdf:
       for index, page in enumerate(pdf.pages, start=1):
         text = page.extract_text() or ""
         if text.strip():
           pages.append({"page_number": index, "text": text})
-
-    if not pages:
-      raise HTTPException(status_code=400, detail="No extractable text found in the PDF.")
-
     return pages
 
   def _clear_existing_chunks(self, room_id: str, document_id: str):
@@ -189,6 +247,9 @@ class DocumentService:
       mongo_service.document_chunks.delete_many(
         {"room_id": room_id, "document_id": document_id}
       )
+
+
+document_service = DocumentService()
 
 
 document_service = DocumentService()

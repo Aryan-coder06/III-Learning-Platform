@@ -28,22 +28,12 @@ import {
 } from "@/lib/mock/dashboard";
 import { useAuthStore } from "@/lib/auth/auth-store";
 
-function SectionHeading({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="mb-4">
-      <h3 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[-0.05em]">
-        {title}
-      </h3>
-      <p className="text-sm leading-6 text-muted-foreground">{description}</p>
-    </div>
-  );
-}
+import { WorkspaceSectionHeading } from "@/components/shared/workspace-section-heading";
+import { MessagingPreview } from "@/components/messages/messaging-preview";
+import { DocumentsView } from "@/components/documents/documents-view";
+import { WhiteboardPreview } from "@/components/whiteboard/whiteboard-preview";
+import { SessionsSidebar } from "@/components/sessions/sessions-sidebar";
+import { ActivityFeed } from "@/components/notifications/activity-feed";
 
 export function DashboardOverview() {
   const user = useAuthStore((state) => state.user);
@@ -91,19 +81,6 @@ export function DashboardOverview() {
     },
     ...dashboardStats.slice(2),
   ];
-  const liveConversationPreview =
-    featuredRooms.length > 0
-      ? featuredRooms.map((room) => ({
-          room: room.title,
-          unread: room.aiRoomReady ? 1 : 0,
-          sender: room.members[0]?.name || room.createdByName || "Room",
-          lastMessage: room.lastActivity,
-          time: new Date(room.updatedAt).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        }))
-      : conversationPreview;
 
   return (
     <div className="space-y-4">
@@ -143,7 +120,7 @@ export function DashboardOverview() {
       <div className="grid gap-4 2xl:grid-cols-[1.2fr_0.8fr]">
         <Card className="border-2 border-foreground/85">
           <CardContent className="p-4">
-            <SectionHeading
+            <WorkspaceSectionHeading
               title="Private Rooms"
               description="Focused rooms are now the primary collaboration and retrieval surface, with live room codes and AI-ready discussion."
             />
@@ -218,153 +195,24 @@ export function DashboardOverview() {
           </CardContent>
         </Card>
 
-        <Card className="border-none bg-sidebar text-sidebar-foreground shadow-[0_20px_34px_rgba(19,19,19,0.16)]">
-          <CardContent className="space-y-4 p-4">
-            <SectionHeading
-              title="Real-Time Messaging"
-              description="Unread room threads and collaboration signals."
-            />
-            <div className="space-y-3">
-              {liveConversationPreview.map((thread) => (
-                <div
-                  key={thread.room}
-                  className="rounded-[1.35rem] border border-sidebar-foreground/10 bg-sidebar-foreground/[0.05] p-4"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-semibold">{thread.room}</p>
-                    <Badge variant={thread.unread ? "accent" : "outline"}>
-                      {thread.unread} unread
-                    </Badge>
-                  </div>
-                  <p className="mt-3 text-sm leading-6 text-sidebar-foreground/68">
-                    {thread.sender}: {thread.lastMessage}
-                  </p>
-                  <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/46">
-                    {thread.time}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <MessagingPreview />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-        <Card>
-          <CardContent className="p-4">
-            <SectionHeading
-              title="Document Sharing"
-              description="Recent resources linked to rooms and ready for room-scoped indexing."
-            />
-            <div className="space-y-3">
-              {recentFiles.map((file) => (
-                <div
-                  key={file.name}
-                  className="grid gap-3 rounded-[1.35rem] border border-border/70 bg-secondary/45 p-4 md:grid-cols-[1fr_auto]"
-                >
-                  <div>
-                    <p className="font-semibold text-foreground">{file.name}</p>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      Uploaded by {file.uploader} in {file.room}
-                    </p>
-                  </div>
-                  <div className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    {file.date}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 2xl:grid-cols-[1.05fr_0.95fr]">
+        <DocumentsView />
 
         <div className="grid gap-4">
-          <Card className="overflow-hidden border border-border/70 bg-[linear-gradient(135deg,rgba(255,48,0,0.08),transparent_40%),white]">
-            <CardContent className="p-4">
-              <SectionHeading
-                title="Virtual Whiteboard"
-                description="Reserved collaborative canvas for diagramming and problem breakdowns."
-              />
-              <div className="rounded-[1.5rem] border border-border/70 bg-secondary/45 p-4">
-                <div className="grid grid-cols-8 gap-2">
-                  {Array.from({ length: 24 }).map((_, index) => (
-                    <div
-                      key={index}
-                      className={`h-6 rounded-full ${
-                        index % 5 === 0
-                          ? "bg-accent"
-                          : index % 3 === 0
-                            ? "bg-sidebar"
-                            : "bg-card"
-                      }`}
-                    />
-                  ))}
-                </div>
-                <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                  Collaborative canvas for visual learning and diagramming.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="grid gap-3 p-4 md:grid-cols-2">
-              <div className="rounded-[1.35rem] border border-border/70 bg-secondary/45 p-4">
-                <div className="inline-flex items-center gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  <Video className="h-4 w-4 text-accent" />
-                  Upcoming sessions
-                </div>
-                <div className="mt-3 space-y-3">
-                  {upcomingSessions.map((session) => (
-                    <div key={session.room} className="rounded-[1rem] border border-border/70 bg-white p-3">
-                      <p className="font-semibold text-foreground">{session.room}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">{session.topic}</p>
-                      <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                        {session.datetime} · {session.participants} participants
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-[1.35rem] border border-border/70 bg-secondary/45 p-4">
-                <div className="inline-flex items-center gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  <BellRing className="h-4 w-4 text-accent" />
-                  Reminders
-                </div>
-                <div className="mt-3 space-y-3">
-                  {reminders.map((reminder) => (
-                    <div key={reminder.title} className="rounded-[1rem] border border-border/70 bg-white p-3">
-                      <p className="font-semibold text-foreground">{reminder.title}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">{reminder.status}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <WhiteboardPreview />
+          <SessionsSidebar />
         </div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-        <Card>
-          <CardContent className="p-4">
-            <SectionHeading
-              title="Activity Feed"
-              description="Recent room actions and collaboration highlights."
-            />
-            <div className="space-y-3">
-              {activityFeed.map((activity) => (
-                <div key={activity} className="rounded-[1.25rem] border border-border/70 bg-secondary/45 p-4 text-sm leading-6 text-muted-foreground">
-                  {activity}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <ActivityFeed />
 
         <Card>
           <CardContent className="p-4">
-            <SectionHeading
+            <WorkspaceSectionHeading
               title="Execution Strip"
               description="The shell is ready for room-scoped uploads, retrieval runs, and next agent passes."
             />

@@ -71,6 +71,18 @@ async function uploadRoomDocument(roomId, formData) {
   return parseResponse(response, "Failed to upload the room document.");
 }
 
+async function syncDocumentToAiService(roomId, documentData) {
+  const response = await fetch(`${env.aiServiceUrl}/api/rooms/${roomId}/documents/sync`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(documentData),
+  });
+
+  return parseResponse(response, "Failed to sync document metadata with AI service.");
+}
+
 async function processRoomDocument(roomId, documentId) {
   const response = await fetch(
     `${env.aiServiceUrl}/api/rooms/${roomId}/documents/${documentId}/process`,
@@ -86,6 +98,6 @@ module.exports = {
   syncPrivateRoom,
   queryRoomKnowledge,
   listRoomDocuments,
-  uploadRoomDocument,
+  syncDocumentToAiService,
   processRoomDocument,
 };

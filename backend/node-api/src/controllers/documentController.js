@@ -4,10 +4,12 @@ const {
   normalizeIdentity,
 } = require("../services/room.service");
 const {
-  listRoomDocuments,
+  syncDocumentToAiService,
   processRoomDocument,
-  uploadRoomDocument,
 } = require("../services/ai-room.service");
+const { uploadToCloudinary } = require("../services/upload.service");
+const Document = require("../models/Document");
+const { v4: uuidv4 } = require("uuid");
 
 exports.uploadDocument = async (req, res) => {
   try {
@@ -24,17 +26,39 @@ exports.uploadDocument = async (req, res) => {
     });
     assertMember(room, actor.userId);
 
-    const formData = new FormData();
-    formData.append(
-      "file",
-      new Blob([req.file.buffer], { type: req.file.mimetype || "application/pdf" }),
-      req.file.originalname,
-    );
-    formData.append("uploaded_by", actor.email);
+    // Metadata from req.file (populated by multer-storage-cloudinary)
+    const documentId = `doc_${uuidv4().replace(/-/g, "").substring(0, 12)}`;
+    const now = new Date();
+    const documentData = {
+      document_id: documentId,
+      room_id: room_id,
+      workspace_id: "main-workspace", // Match FastAPI default
+      filename: req.file.originalname,
+      file_path: req.file.path, // The Cloudinary secure_url
+      cloudinary_public_id: req.file.filename, // The Cloudinary public_id
+      cloudinary_secure_url: req.file.path,
+      resource_type: "raw", // Cloudinary storage config may vary
+      format: "pdf",
+      bytes: req.file.size,
+      mime_type: req.file.mimetype || "application/pdf",
+      uploaded_by: actor.email,
+      upload_time: now.toISOString(),
+      processing_status: "uploaded",
+      index_status: "pending",
+      page_count: 0,
+      chunk_count: 0,
+      version: 1,
+    };
 
-    const document = await uploadRoomDocument(room.roomId, formData);
+    const document = new Document(documentData);
+    await document.save();
+
+    // 3. Sync metadata to AI service
+    await syncDocumentToAiService(room_id, documentData);
+
     res.status(201).json(document);
   } catch (error) {
+    console.error("Upload error:", error);
     res.status(error.status || 500).json({ error: error.message });
   }
 };
@@ -44,6 +68,12 @@ exports.processDocument = async (req, res) => {
     const { room_id, document_id } = req.params;
     const room = await requireRoom(room_id);
     assertMember(room, req.body.user_id || req.query.user_id);
+
+    // Update status in MongoDB
+    await Document.findOneAndUpdate(
+      { document_id: document_id },
+      { processing_status: "processing", index_status: "processing" }
+    );
 
     const result = await processRoomDocument(room_id, document_id);
     res.json(result);
@@ -58,7 +88,7 @@ exports.listDocuments = async (req, res) => {
     const room = await requireRoom(room_id);
     assertMember(room, req.query.user_id);
 
-    const documents = await listRoomDocuments(room_id);
+    const documents = await Document.find({ room_id: room_id }).sort({ upload_time: -1 });
     res.json(documents);
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message });

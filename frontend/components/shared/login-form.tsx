@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/lib/auth/auth-store";
+import { syncUserApi } from "@/lib/api/user";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address."),
@@ -34,18 +35,37 @@ export function LoginForm({ nextPath }: LoginFormProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
-  const proceed = (email: string, name?: string) => {
+  const proceed = async (email: string, name?: string, avatarUrl?: string, firebaseUid?: string) => {
     const defaultName = email.split("@")[0].replace(/[._-]/g, " ");
-    signIn({
-      email,
-      name:
-        name ??
+    const finalName = name ??
         (defaultName.length > 1
           ? defaultName.replace(/\b\w/g, (character) => character.toUpperCase())
-          : "User"),
-      role: "Student",
-    });
-    startTransition(() => router.push(nextPath));
+          : "User");
+    
+    // Normalize userId similar to backend
+    const userId = email.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+    try {
+      // Sync with MongoDB
+      await syncUserApi({
+        userId,
+        email,
+        name: finalName,
+        avatarUrl,
+        firebaseUid,
+        role: "student"
+      });
+
+      signIn({
+        email,
+        name: finalName,
+        role: "Student",
+      });
+      startTransition(() => router.push(nextPath));
+    } catch (error) {
+      console.error("Sync Error:", error);
+      setErrors({ email: "Failed to sync user data with server." });
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -54,7 +74,7 @@ export function LoginForm({ nextPath }: LoginFormProps) {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
       if (user.email) {
-        proceed(user.email, user.displayName ?? undefined);
+        await proceed(user.email, user.displayName ?? undefined, user.photoURL ?? undefined, user.uid);
       }
     } catch (error) {
       console.error("Google Sign-in Error:", error);
@@ -64,7 +84,7 @@ export function LoginForm({ nextPath }: LoginFormProps) {
     }
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setBusy(true);
 
@@ -80,7 +100,7 @@ export function LoginForm({ nextPath }: LoginFormProps) {
     }
 
     setErrors({});
-    proceed(result.data.email);
+    await proceed(result.data.email);
     setBusy(false);
   };
 
