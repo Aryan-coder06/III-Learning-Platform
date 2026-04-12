@@ -47,7 +47,7 @@ export function LoginForm({ nextPath }: LoginFormProps) {
 
     try {
       // Sync with MongoDB
-      await syncUserApi({
+      const syncedUser = await syncUserApi({
         userId,
         email,
         name: finalName,
@@ -60,6 +60,7 @@ export function LoginForm({ nextPath }: LoginFormProps) {
         email,
         name: finalName,
         role: "Student",
+        mongoId: syncedUser._id,
       });
       startTransition(() => router.push(nextPath));
     } catch (error) {

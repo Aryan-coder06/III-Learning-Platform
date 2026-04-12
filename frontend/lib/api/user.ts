@@ -38,3 +38,15 @@ export async function syncUserApi(payload: {
 
   return parseResponse<any>(response);
 }
+
+export async function uploadUserFileApi(userId: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${NODE_API_URL}/api/users/${userId}/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  return parseResponse<{ user: any; file: any }>(response);
+}

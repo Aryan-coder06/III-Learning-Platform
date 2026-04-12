@@ -1,4 +1,4 @@
-#!/home/aryan-s/Documents/GENAI/III-student-learning/backend/ai-service/.venv/bin/python
+#!/home/anshdeep-singh/Documents/III-student-learning/backend/ai-service/.venv/bin/python3.13
 """Extract pdf structure in XML format"""
 
 import logging
