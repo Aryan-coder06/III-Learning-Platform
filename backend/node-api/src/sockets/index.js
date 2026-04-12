@@ -137,9 +137,40 @@ module.exports = (server, corsOptions) => {
         socket.join(room.roomId);
         socket.data.identity = actor;
         socket.data.roomId = room.roomId;
+        
+        // Emit chat history
         socket.emit("chat_history", await getRoomHistory(room.roomId, 120));
+        
+        // If there's whiteboard history for this room, emit it (optional, can be done later)
       } catch (error) {
         socketError(socket, error.message || "Could not join room.");
+      }
+    });
+
+    // Whiteboard events
+    socket.on("whiteboard:join", (payload) => {
+      const roomId = typeof payload === "string" ? payload : payload?.roomId;
+      if (roomId) {
+        socket.join(`whiteboard_${roomId}`);
+        socket.data.whiteboardRoomId = `whiteboard_${roomId}`;
+        console.log(`User joined whiteboard room: whiteboard_${roomId}`);
+      }
+    });
+
+    socket.on("whiteboard:draw", (payload) => {
+      const roomId = payload?.roomId || socket.data.whiteboardRoomId || socket.data.roomId;
+      if (roomId) {
+        const targetRoom = roomId.startsWith("whiteboard_") ? roomId : `whiteboard_${roomId}`;
+        // Broadcast to everyone in the room except sender
+        socket.to(targetRoom).emit("whiteboard:draw", payload.data);
+      }
+    });
+
+    socket.on("whiteboard:clear", (payload) => {
+      const roomId = payload?.roomId || socket.data.whiteboardRoomId || socket.data.roomId;
+      if (roomId) {
+        const targetRoom = roomId.startsWith("whiteboard_") ? roomId : `whiteboard_${roomId}`;
+        socket.to(targetRoom).emit("whiteboard:clear");
       }
     });
 
@@ -147,6 +178,7 @@ module.exports = (server, corsOptions) => {
       const roomId = typeof payload === "string" ? payload : payload?.roomId;
       if (roomId) {
         socket.leave(roomId);
+        socket.leave(`whiteboard_${roomId}`);
       }
     });
 
