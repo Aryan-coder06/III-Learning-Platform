@@ -29,6 +29,11 @@ export const metadata: Metadata = {
   },
   description:
     "A collaborative study operating system for rooms, messaging, files, whiteboards, sessions, and reminders.",
+  icons: {
+    icon: "/Hey_create_a_202604130022.png",
+    shortcut: "/Hey_create_a_202604130022.png",
+    apple: "/Hey_create_a_202604130022.png",
+  },
 };
 
 export default function RootLayout({
