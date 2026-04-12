@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowUpRight, BrainCircuit, CalendarClock, Sparkles, TrendingUp } from "lucide-react";
+import { BrainCircuit, CalendarClock, Sparkles, TrendingUp } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLiveDate } from "@/hooks/use-live-date";
 
@@ -28,8 +26,7 @@ export function DashboardHeader({ name }: DashboardHeaderProps) {
                 {name}.
               </h2>
               <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
-                Private rooms, unread threads, uploads, and room-scoped knowledge
-                are now the first-class control surface.
+                Track your tasks, manage study sessions, and stay on top of your learning goals.
               </p>
             </div>
           </div>
@@ -77,19 +74,9 @@ export function DashboardHeader({ name }: DashboardHeaderProps) {
               {liveDate}
             </div>
             <p className="mt-4 text-base leading-7 text-sidebar-foreground/76">
-              FastAPI room knowledge, Mongo metadata, and future LangGraph runs can
-              now plug into the dashboard shell without reshaping the UI again.
+              Your personal workspace is ready. Use the task board below to organize
+              your study plan and track progress across subjects.
             </p>
-            <div className="mt-4 rounded-[1.3rem] border border-sidebar-foreground/10 bg-sidebar-foreground/[0.05] p-4 text-sm leading-6 text-sidebar-foreground/58">
-              Private rooms now act as the scoped entry point for uploads, indexed
-              PDFs, discussion, and future agent flows.
-            </div>
-            <Button asChild variant="accent" className="mt-4">
-              <Link href="/rooms">
-                Open private rooms
-                <ArrowUpRight className="h-4 w-4" />
-              </Link>
-            </Button>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
