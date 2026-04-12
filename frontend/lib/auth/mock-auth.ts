@@ -4,6 +4,7 @@ export type MockUser = {
   email: string;
   name: string;
   role: string;
+  mongoId?: string;
 };
 
 export function setMockAuthCookie() {

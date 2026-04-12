@@ -9,7 +9,7 @@ export function LandingHeader() {
         <Link href="/" className="flex items-center gap-4">
           <div className="h-9 w-9 bg-accent" />
           <div className="font-[var(--font-display)] text-3xl font-bold uppercase tracking-[-0.08em]">
-            StudySync AI
+            StudySync 
           </div>
         </Link>
 

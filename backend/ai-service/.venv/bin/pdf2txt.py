@@ -1,4 +1,4 @@
-#!/home/aryan-s/Documents/GENAI/III-student-learning/backend/ai-service/.venv/bin/python
+#!/home/anshdeep-singh/Documents/III-student-learning/backend/ai-service/.venv/bin/python3.13
 """A command line tool for extracting text and images from PDF and
 output it to plain text, html, xml or tags.
 """

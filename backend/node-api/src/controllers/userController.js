@@ -84,3 +84,36 @@ exports.addUserFile = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+/**
+ * Handle direct file upload for a user using multer and Cloudinary
+ */
+exports.uploadUserFile = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: "No file uploaded." });
+        }
+
+        const { id } = req.params;
+        const user = await User.findById(id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const newFile = {
+            url: req.file.path,
+            filename: req.file.originalname,
+            cloudinary_public_id: req.file.filename,
+            cloudinary_secure_url: req.file.path,
+            resource_type: "raw", 
+            format: "pdf", // Cloudinary parsing usually keeps it pdf here.
+            bytes: req.file.size
+        };
+
+        user.files.push(newFile);
+        await user.save();
+
+        res.status(201).json({ user, file: newFile });
+    } catch (error) {
+        console.error("User File Upload Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+};

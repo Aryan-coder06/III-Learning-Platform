@@ -16,24 +16,15 @@ export function WhiteboardPreview({ className }: WhiteboardPreviewProps) {
           title="Virtual Whiteboard"
           description="Reserved collaborative canvas for diagramming and problem breakdowns."
         />
-        <div className="rounded-[1.5rem] border border-border/70 bg-secondary/45 p-4">
-          <div className="grid grid-cols-8 gap-2">
-            {Array.from({ length: 24 }).map((_, index) => (
-              <div
-                key={index}
-                className={`h-6 rounded-full ${
-                  index % 5 === 0
-                    ? "bg-accent"
-                    : index % 3 === 0
-                      ? "bg-sidebar"
-                      : "bg-card"
-                }`}
-              />
-            ))}
-          </div>
-          <p className="mt-4 text-sm leading-6 text-muted-foreground">
-            Collaborative canvas for visual learning and diagramming.
-          </p>
+        <div className="mt-4 overflow-hidden rounded-xl border border-border/70 bg-secondary/45 relative min-h-[432px] w-full">
+          <iframe 
+            className="absolute top-0 left-0 w-full h-full"
+            src="https://miro.com/app/live-embed/uXjVGjkHXRw=/?moveToViewport=-576,-312,1152,622&embedId=937679093277" 
+            frameBorder="0" 
+            scrolling="no" 
+            allow="fullscreen; clipboard-read; clipboard-write" 
+            allowFullScreen
+          ></iframe>
         </div>
       </CardContent>
     </Card>

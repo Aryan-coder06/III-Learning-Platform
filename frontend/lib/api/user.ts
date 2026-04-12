@@ -1,6 +1,6 @@
 import type { MockUser } from "@/lib/auth/mock-auth";
 
-const NODE_API_URL = process.env.NEXT_PUBLIC_NODE_API_URL || "http://127.0.0.1:4000";
+const NODE_API_URL = process.env.NEXT_PUBLIC_NODE_API_URL;
 
 async function parseResponse<T>(response: Response): Promise<T> {
   if (response.ok) {
@@ -37,4 +37,16 @@ export async function syncUserApi(payload: {
   });
 
   return parseResponse<any>(response);
+}
+
+export async function uploadUserFileApi(userId: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${NODE_API_URL}/api/users/${userId}/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  return parseResponse<{ user: any; file: any }>(response);
 }
