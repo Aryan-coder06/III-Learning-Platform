@@ -1,16 +1,16 @@
-import Image from "next/image";
+"use client";
+
+import Link from "next/link";
 import {
   ArrowUpRight,
   BellRing,
+  BrainCircuit,
   CalendarClock,
   FileUp,
-  MessageSquareMore,
-  PanelsTopLeft,
-  Plus,
-  UsersRound,
   Video,
 } from "lucide-react";
 
+import { CreatePrivateRoomPanel } from "@/components/rooms/create-private-room-panel";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,58 +20,52 @@ import {
   conversationPreview,
   dashboardStats,
   demoUser,
-  joinedRooms,
   recentFiles,
   reminders,
   upcomingSessions,
 } from "@/lib/mock/dashboard";
+import { useRoomStore } from "@/lib/rooms/room-store";
 
-function PanelHeader({
-  icon: Icon,
+function SectionHeading({
   title,
   description,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
   title: string;
   description: string;
 }) {
   return (
-    <div className="mb-6 flex items-start justify-between gap-4">
-      <div className="flex items-start gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
-          <Icon className="h-5 w-5" />
-        </div>
-        <div>
-          <h3 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[-0.05em]">
-            {title}
-          </h3>
-          <p className="text-sm leading-6 text-muted-foreground">{description}</p>
-        </div>
-      </div>
+    <div className="mb-4">
+      <h3 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[-0.05em]">
+        {title}
+      </h3>
+      <p className="text-sm leading-6 text-muted-foreground">{description}</p>
     </div>
   );
 }
 
 export function DashboardOverview() {
+  const rooms = useRoomStore((state) => state.rooms);
+  const featuredRooms = rooms.slice(0, 3);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <DashboardHeader name={demoUser.name} />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         {dashboardStats.map((stat, index) => (
           <Card
             key={stat.label}
             className={
               index === 0
-                ? "border-none bg-sidebar text-sidebar-foreground shadow-[0_22px_34px_rgba(19,19,19,0.16)]"
+                ? "border-none bg-sidebar text-sidebar-foreground shadow-[0_20px_34px_rgba(19,19,19,0.16)]"
                 : index === 1
-                  ? "border-none bg-accent text-accent-foreground shadow-[0_22px_34px_rgba(255,48,0,0.14)]"
+                  ? "border-none bg-accent text-accent-foreground shadow-[0_20px_34px_rgba(255,48,0,0.14)]"
                   : "bg-card"
             }
           >
-            <CardContent className="space-y-2 p-5">
+            <CardContent className="space-y-2 p-4">
               <p
-                className={`text-sm font-semibold uppercase tracking-[0.18em] ${
+                className={`text-[0.72rem] font-semibold uppercase tracking-[0.18em] ${
                   index < 2 ? "text-current/72" : "text-muted-foreground"
                 }`}
               >
@@ -88,84 +82,89 @@ export function DashboardOverview() {
         ))}
       </div>
 
-      <div className="grid gap-6 2xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="grid gap-4 2xl:grid-cols-[1.2fr_0.8fr]">
         <Card className="border-2 border-foreground/85">
-          <CardContent className="p-6">
-            <PanelHeader
-              icon={UsersRound}
-              title="Study Rooms"
-              description="Joined rooms, topic focus, member counts, and the next live touchpoint."
+          <CardContent className="p-4">
+            <SectionHeading
+              title="Private Rooms"
+              description="Focused rooms are now the primary collaboration and retrieval surface."
             />
-            <div className="mb-5 flex flex-col gap-3 sm:flex-row">
-              <Button variant="dark">
-                <Plus className="h-4 w-4" />
-                Create Room
+
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+              <Button asChild variant="dark">
+                <Link href="/rooms">
+                  Create Private Room
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
               </Button>
-              <Button variant="outline">
-                <ArrowUpRight className="h-4 w-4" />
-                Join Room
+              <Button asChild variant="outline">
+                <Link href="/rooms">
+                  Open Room Directory
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
               </Button>
             </div>
-            <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-              <div className="grid gap-4">
-                {joinedRooms.map((room) => (
+
+            <div className="grid gap-3 xl:grid-cols-[1.05fr_0.95fr]">
+              <div className="grid gap-3">
+                {featuredRooms.map((room) => (
                   <div
-                    key={room.name}
-                    className="rounded-[1.7rem] border border-border/70 bg-secondary/45 p-5"
+                    key={room.roomId}
+                    className="rounded-[1.45rem] border border-border/70 bg-secondary/45 p-4"
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <h4 className="font-semibold">{room.name}</h4>
-                      <Badge variant="subtle">{room.status}</Badge>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="accent">{room.topicLabel}</Badge>
+                      <Badge variant={room.backendReady ? "default" : "subtle"}>
+                        {room.backendReady ? "Knowledge ready" : "Demo room"}
+                      </Badge>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                      {room.topic}
-                    </p>
-                    <div className="mt-6 flex flex-wrap gap-4 text-sm text-muted-foreground">
-                      <p>{room.members} members</p>
-                      <p>{room.nextSession}</p>
+
+                    <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h4 className="text-lg font-semibold text-foreground">{room.title}</h4>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          {room.description}
+                        </p>
+                      </div>
+                      <Button asChild variant="outline" className="shrink-0">
+                        <Link href={`/rooms/${room.roomId}`}>
+                          Open
+                          <ArrowUpRight className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </div>
+
+                    <div className="mt-4 grid gap-2 text-sm text-muted-foreground md:grid-cols-3">
+                      <div className="rounded-[1rem] border border-border/70 bg-white px-3 py-2">
+                        {room.memberIds.length} members
+                      </div>
+                      <div className="rounded-[1rem] border border-border/70 bg-white px-3 py-2">
+                        {room.nextFocus}
+                      </div>
+                      <div className="rounded-[1rem] border border-border/70 bg-white px-3 py-2">
+                        {room.lastActivity}
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <div className="rounded-[1.9rem] border border-border/70 bg-sidebar p-5 text-sidebar-foreground">
-                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/60">
-                  Focus room
-                </p>
-                <div className="mt-5 rounded-[1.5rem] border border-sidebar-foreground/10 bg-sidebar-foreground/[0.04] p-5">
-                  <p className="font-[var(--font-display)] text-3xl font-bold uppercase tracking-[-0.06em]">
-                    {joinedRooms[0]?.name}
-                  </p>
-                  <p className="mt-3 text-sm leading-7 text-sidebar-foreground/64">
-                    {joinedRooms[0]?.topic}
-                  </p>
-                </div>
-                <div className="mt-5 space-y-3">
-                  <div className="rounded-[1.35rem] border border-sidebar-foreground/10 bg-black/20 p-4 text-sm text-sidebar-foreground/72">
-                    Next session: {joinedRooms[0]?.nextSession}
-                  </div>
-                  <div className="rounded-[1.35rem] border border-sidebar-foreground/10 bg-black/20 p-4 text-sm text-sidebar-foreground/72">
-                    Live room checklist, pinned notes, and attendance summary can
-                    sit here next.
-                  </div>
-                </div>
-              </div>
+              <CreatePrivateRoomPanel compact />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-none bg-sidebar text-sidebar-foreground shadow-[0_22px_34px_rgba(19,19,19,0.16)]">
-          <CardContent className="p-6">
-            <PanelHeader
-              icon={MessageSquareMore}
+        <Card className="border-none bg-sidebar text-sidebar-foreground shadow-[0_20px_34px_rgba(19,19,19,0.16)]">
+          <CardContent className="space-y-4 p-4">
+            <SectionHeading
               title="Real-Time Messaging"
-              description="Unread threads and recent discussion previews across joined rooms."
+              description="Unread room threads and collaboration signals."
             />
             <div className="space-y-3">
               {conversationPreview.map((thread) => (
                 <div
                   key={thread.room}
-                  className="rounded-[1.5rem] border border-sidebar-foreground/10 bg-sidebar-foreground/[0.05] p-4"
+                  className="rounded-[1.35rem] border border-sidebar-foreground/10 bg-sidebar-foreground/[0.05] p-4"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <p className="font-semibold">{thread.room}</p>
@@ -186,35 +185,22 @@ export function DashboardOverview() {
         </Card>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_1fr] 2xl:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <Card>
-          <CardContent className="p-6">
-            <PanelHeader
-              icon={FileUp}
+          <CardContent className="p-4">
+            <SectionHeading
               title="Document Sharing"
-              description="Recently shared resources tied to rooms and uploader context."
+              description="Recent resources linked to rooms and ready for room-scoped indexing."
             />
-            <div className="mb-5 flex justify-start">
-              <Button variant="outline">Upload Resource</Button>
-            </div>
             <div className="space-y-3">
               {recentFiles.map((file) => (
                 <div
                   key={file.name}
-                  className="grid gap-4 rounded-[1.6rem] border border-border/70 bg-secondary/45 p-4 md:grid-cols-[auto_1fr_auto]"
+                  className="grid gap-3 rounded-[1.35rem] border border-border/70 bg-secondary/45 p-4 md:grid-cols-[1fr_auto]"
                 >
-                  <div className="flex h-16 w-16 items-center justify-center rounded-[1.3rem] bg-card">
-                    <Image
-                      src="/theme/placeholder.svg"
-                      alt="File placeholder"
-                      width={44}
-                      height={44}
-                      className="h-11 w-auto"
-                    />
-                  </div>
                   <div>
-                    <p className="font-semibold">{file.name}</p>
-                    <p className="text-sm leading-6 text-muted-foreground">
+                    <p className="font-semibold text-foreground">{file.name}</p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
                       Uploaded by {file.uploader} in {file.room}
                     </p>
                   </div>
@@ -227,20 +213,19 @@ export function DashboardOverview() {
           </CardContent>
         </Card>
 
-        <div className="grid gap-6">
+        <div className="grid gap-4">
           <Card className="overflow-hidden border border-border/70 bg-[linear-gradient(135deg,rgba(255,48,0,0.08),transparent_40%),white]">
-            <CardContent className="p-6">
-              <PanelHeader
-                icon={PanelsTopLeft}
+            <CardContent className="p-4">
+              <SectionHeading
                 title="Virtual Whiteboard"
-                description="A reserved canvas module for collaborative drawing and visual explanation."
+                description="Reserved collaborative canvas for diagramming and problem breakdowns."
               />
-              <div className="rounded-[1.8rem] border border-border/70 bg-secondary/45 p-4">
+              <div className="rounded-[1.5rem] border border-border/70 bg-secondary/45 p-4">
                 <div className="grid grid-cols-8 gap-2">
                   {Array.from({ length: 24 }).map((_, index) => (
                     <div
                       key={index}
-                      className={`h-7 rounded-full ${
+                      className={`h-6 rounded-full ${
                         index % 5 === 0
                           ? "bg-accent"
                           : index % 3 === 0
@@ -251,86 +236,102 @@ export function DashboardOverview() {
                   ))}
                 </div>
                 <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                  Collaborative drawing, cursor sync, and Excalidraw-style session mode
-                  will connect here in a future stage.
+                  Excalidraw-style collaboration can attach here without reworking the shell.
                 </p>
               </div>
-              <Button className="mt-5" variant="dark">
-                Open Whiteboard
-              </Button>
             </CardContent>
           </Card>
 
-          <Card className="border border-border/70 bg-[linear-gradient(180deg,rgba(242,242,242,0.65),white)]">
-            <CardContent className="p-6">
-              <PanelHeader
-                icon={BellRing}
-                title="Notifications and Reminders"
-                description="Upcoming reminders and missed actions that need a quick response."
-              />
-              <div className="space-y-3">
-                {reminders.map((reminder) => (
-                  <div
-                    key={reminder.title}
-                    className="rounded-[1.5rem] border border-border/70 bg-secondary/45 p-4"
-                  >
-                    <p className="font-semibold">{reminder.title}</p>
-                    <p className="mt-2 text-sm text-muted-foreground">{reminder.status}</p>
-                  </div>
-                ))}
+          <Card>
+            <CardContent className="grid gap-3 p-4 md:grid-cols-2">
+              <div className="rounded-[1.35rem] border border-border/70 bg-secondary/45 p-4">
+                <div className="inline-flex items-center gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <Video className="h-4 w-4 text-accent" />
+                  Upcoming sessions
+                </div>
+                <div className="mt-3 space-y-3">
+                  {upcomingSessions.map((session) => (
+                    <div key={session.room} className="rounded-[1rem] border border-border/70 bg-white p-3">
+                      <p className="font-semibold text-foreground">{session.room}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{session.topic}</p>
+                      <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                        {session.datetime} · {session.participants} participants
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-[1.35rem] border border-border/70 bg-secondary/45 p-4">
+                <div className="inline-flex items-center gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <BellRing className="h-4 w-4 text-accent" />
+                  Reminders
+                </div>
+                <div className="mt-3 space-y-3">
+                  {reminders.map((reminder) => (
+                    <div key={reminder.title} className="rounded-[1rem] border border-border/70 bg-white p-3">
+                      <p className="font-semibold text-foreground">{reminder.title}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{reminder.status}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      <div className="grid gap-6 2xl:grid-cols-[0.95fr_1.05fr]">
-        <Card className="border border-border/70 bg-[linear-gradient(180deg,rgba(242,242,242,0.55),white)]">
-          <CardContent className="p-6">
-            <PanelHeader
-              icon={Video}
-              title="Video Conferencing"
-              description="Upcoming study sessions, room calls, and planned join actions."
+      <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+        <Card>
+          <CardContent className="p-4">
+            <SectionHeading
+              title="Activity Feed"
+              description="Recent room actions and collaboration highlights."
             />
             <div className="space-y-3">
-              {upcomingSessions.map((session) => (
-                <div
-                  key={session.topic}
-                  className="rounded-[1.5rem] border border-border/70 bg-secondary/45 p-4"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold">{session.topic}</p>
-                      <p className="text-sm text-muted-foreground">{session.room}</p>
-                    </div>
-                    <Button variant="outline">Join Session</Button>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted-foreground">
-                    <span>{session.datetime}</span>
-                    <span>{session.participants} participants</span>
-                  </div>
+              {activityFeed.map((activity) => (
+                <div key={activity} className="rounded-[1.25rem] border border-border/70 bg-secondary/45 p-4 text-sm leading-6 text-muted-foreground">
+                  {activity}
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-border/70 bg-[linear-gradient(135deg,rgba(255,48,0,0.06),transparent_38%),white]">
-          <CardContent className="p-6">
-            <PanelHeader
-              icon={CalendarClock}
-              title="Activity Feed"
-              description="Recent collaboration events across rooms, files, and scheduled sessions."
+        <Card>
+          <CardContent className="p-4">
+            <SectionHeading
+              title="Execution Strip"
+              description="The shell is ready for room-scoped uploads, retrieval runs, and next agent passes."
             />
-            <div className="space-y-3">
-              {activityFeed.map((item) => (
-                <div
-                  key={item}
-                  className="rounded-[1.5rem] border border-border/70 bg-secondary/45 p-4 text-sm leading-7 text-muted-foreground"
-                >
-                  {item}
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-[1.25rem] border border-border/70 bg-secondary/45 p-4">
+                <div className="inline-flex items-center gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <FileUp className="h-4 w-4 text-accent" />
+                  Room uploads
                 </div>
-              ))}
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                  PDFs persist per room and index incrementally.
+                </p>
+              </div>
+              <div className="rounded-[1.25rem] border border-border/70 bg-secondary/45 p-4">
+                <div className="inline-flex items-center gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <BrainCircuit className="h-4 w-4 text-accent" />
+                  Hybrid retrieval
+                </div>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                  BM25 and dense room retrieval merge into grounded results.
+                </p>
+              </div>
+              <div className="rounded-[1.25rem] border border-border/70 bg-secondary/45 p-4">
+                <div className="inline-flex items-center gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <CalendarClock className="h-4 w-4 text-accent" />
+                  Next stage
+                </div>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                  LangGraph can plug into the same room context without re-indexing flows.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

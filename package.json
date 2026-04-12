@@ -3,6 +3,9 @@
   "private": true,
   "scripts": {
     "dev": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend/node-api run dev",
+    "dev:ai": "cd backend/ai-service && .venv/bin/uvicorn app.main:app --reload",
+    "dev:all": "npx concurrently \"npm run dev\" \"npm run dev:backend\" \"npm run dev:ai\"",
     "build": "npm --prefix frontend run build",
     "lint": "npm --prefix frontend run lint",
     "start": "npm --prefix frontend run start"

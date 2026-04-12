@@ -6,12 +6,14 @@ type LogoProps = {
   inverted?: boolean;
   href?: string;
   className?: string;
+  compact?: boolean;
 };
 
 export function Logo({
   inverted = false,
   href = "/",
   className,
+  compact = false,
 }: LogoProps) {
   return (
     <Link
@@ -29,24 +31,26 @@ export function Logo({
       >
         SS
       </span>
-      <span className="flex flex-col">
-        <span
-          className={cn(
-            "font-[var(--font-display)] text-lg font-bold uppercase tracking-[-0.08em]",
-            inverted ? "text-sidebar-foreground" : "text-foreground",
-          )}
-        >
-          StudySync AI
+      {!compact && (
+        <span className="flex flex-col">
+          <span
+            className={cn(
+              "font-[var(--font-display)] text-lg font-bold uppercase tracking-[-0.08em]",
+              inverted ? "text-sidebar-foreground" : "text-foreground",
+            )}
+          >
+            StudySync AI
+          </span>
+          <span
+            className={cn(
+              "text-[0.68rem] font-semibold uppercase tracking-[0.28em]",
+              inverted ? "text-sidebar-foreground/55" : "text-muted-foreground",
+            )}
+          >
+            Collaborative study OS
+          </span>
         </span>
-        <span
-          className={cn(
-            "text-[0.68rem] font-semibold uppercase tracking-[0.28em]",
-            inverted ? "text-sidebar-foreground/55" : "text-muted-foreground",
-          )}
-        >
-          Collaborative study OS
-        </span>
-      </span>
+      )}
     </Link>
   );
 }

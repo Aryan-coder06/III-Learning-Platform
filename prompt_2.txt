@@ -1,0 +1,466 @@
+You are building Stage 1 of a frontend-first hackathon project from an existing landing-page HTML theme and related assets.
+
+Project name: StudySync AI
+
+Core product:
+A collaborative study and execution platform for students, study groups, project teams, and academic collaborators.
+
+At this stage, DO NOT build AI features yet.
+DO NOT build the full backend yet.
+Focus on:
+1. converting the provided HTML landing page/theme into our tech stack,
+2. upgrading it into a polished product landing page for StudySync AI,
+3. creating a login page on the right-side flow,
+4. making login redirect to a custom dashboard page,
+5. preparing the full project architecture and folder structure for later frontend + backend development.
+
+==================================================
+TECH STACK TO FOLLOW
+==================================================
+
+Frontend:
+- Next.js (React-based)
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- Lucide icons
+- Framer Motion only if useful and lightweight
+- App Router
+- Clean reusable component architecture
+
+Main backend for later:
+- Node.js + Express.js
+- JavaScript backend
+- Socket.IO for realtime messaging and collaborative events
+- MongoDB + Mongoose
+
+AI service for later only:
+- FastAPI microservice
+- Separate AI service folder reserved for future AI integration
+- Do not implement AI now
+- Only scaffold folders/interfaces for later integration
+
+Other core tech:
+- Zustand or Context API for lightweight frontend state
+- React Query / TanStack Query for future API layer
+- WebRTC or LiveKit/Twilio placeholders for future video conferencing
+- Excalidraw-style whiteboard placeholder architecture or canvas module placeholder
+- Cloudinary or local file abstraction placeholder for future document upload handling
+
+==================================================
+PRODUCT VISION
+==================================================
+
+StudySync AI is not just a task app.
+It is a collaborative student workspace where users can:
+- create and join study rooms
+- collaborate with peers in real time
+- chat and discuss in context
+- share documents and study resources
+- use a shared virtual whiteboard
+- join video sessions
+- stay organized with notifications and reminders
+
+At this stage, the frontend should communicate this clearly.
+The UI should look like a serious modern startup product, not a college mini-project.
+
+==================================================
+CURRENT STAGE GOAL
+==================================================
+
+This is Stage 1: frontend transformation + base product shell.
+
+Stage 1 deliverables:
+- migrate the supplied HTML landing page/theme into Next.js + Tailwind + shadcn
+- preserve visual identity, assets, spacing, layout feel, and any premium aesthetic from the original HTML
+- modernize where needed for consistency
+- make the landing page fully aligned to StudySync AI branding and features
+- add a login page / auth screen flow
+- for now, login can be mocked
+- successful login should redirect to a custom dashboard page
+- dashboard should be frontend-only for now using static/mock data
+- create clean project structure for future backend integration
+
+==================================================
+VERY IMPORTANT: HTML THEME MIGRATION INSTRUCTIONS
+==================================================
+
+First task:
+Inspect the provided HTML landing page and file/folder assets if they exist in the repo or working directory.
+
+If the HTML/theme folder is present:
+- carefully convert the layout into reusable Next.js components
+- extract assets properly
+- migrate CSS into Tailwind utilities where practical
+- keep the same theme feel while improving consistency and responsiveness
+- do not do a raw copy-paste dump; make it production-style React code
+
+If the HTML/theme folder is NOT present:
+- recreate a polished landing page based on a premium SaaS/edtech startup style
+- still follow the StudySync AI product goals below
+- build the page as if it was derived from a strong modern theme
+
+==================================================
+LANDING PAGE REQUIREMENTS
+==================================================
+
+Build a polished landing page for StudySync AI with these sections:
+
+1. Hero section
+- strong product headline
+- short value proposition
+- primary CTA: “Get Started”
+- secondary CTA: “Explore Dashboard”
+- visual/mock illustration of study rooms, dashboard, collaboration flow
+
+Suggested messaging direction:
+“Your collaborative study operating system.”
+or
+“Study together. Plan better. Execute faster.”
+
+2. Feature highlight section
+Must highlight these 6 initial features:
+- Study Rooms
+- Real-Time Messaging
+- Document Sharing
+- Virtual Whiteboard
+- Video Conferencing
+- Notifications and Reminders
+
+Each feature should have:
+- icon
+- short benefit-oriented text
+- concise explanation
+
+3. Why StudySync section
+Explain why this product is useful:
+- less scattered communication
+- one place for discussion + notes + files + sessions
+- ideal for students, teams, clubs, hackathon groups
+
+4. Collaboration workflow section
+Show a simple 3-step or 4-step flow:
+- Create room
+- Invite peers
+- Share and discuss
+- Study and execute together
+
+5. Product preview section
+Show mock cards or dashboard previews:
+- room cards
+- chat pane
+- shared files pane
+- whiteboard/video module placeholders
+
+6. Testimonials or social proof placeholder
+Use tasteful placeholder content
+Do not use fake famous brands
+Keep it generic but polished
+
+7. CTA footer section
+Strong final CTA to sign in / get started
+
+8. Footer
+- logo
+- quick links
+- product links
+- contact placeholder
+- GitHub / website placeholder if needed
+
+==================================================
+AUTH / LOGIN PAGE REQUIREMENTS
+==================================================
+
+The landing page currently has or should have a login action on the right-side flow.
+Build a dedicated login page.
+
+Requirements:
+- clean split-screen or card-based login layout
+- brand continuity with landing page
+- fields:
+  - email
+  - password
+- buttons:
+  - Sign In
+  - Continue as Demo User
+- small text for future signup flow
+- form validation on frontend
+- no real authentication yet
+- on successful submit, redirect to /dashboard
+
+Also create a very small mocked auth layer:
+- store mock logged-in state in localStorage or lightweight frontend state
+- protect /dashboard from direct access if not “logged in”
+- if not logged in, redirect to /login
+
+==================================================
+CUSTOM DASHBOARD PAGE REQUIREMENTS
+==================================================
+
+After login, redirect to a custom student self-study dashboard.
+
+This dashboard is NOT a generic admin page.
+It should feel like a collaborative study control center.
+
+Must include these visible modules:
+
+1. Welcome header
+- personalized greeting
+- quick summary text
+- current day/date placeholder
+
+2. Study Rooms section
+- cards for joined rooms
+- button: Create Room
+- button: Join Room
+- room card info:
+  - room name
+  - subject/topic
+  - member count
+  - active status
+  - next session time
+
+3. Real-Time Messaging preview section
+- recent messages card
+- conversation list preview
+- unread badge
+- placeholder chat area or recent thread panel
+
+4. Document Sharing section
+- recent shared files
+- upload button
+- file card list with:
+  - file name
+  - uploader
+  - room name
+  - upload date
+
+5. Virtual Whiteboard section
+- whiteboard preview card
+- button: Open Whiteboard
+- placeholder canvas snapshot or sketch box
+- note that collaborative drawing/session mode will be added later
+
+6. Video Conferencing section
+- upcoming room sessions
+- Join Session button
+- session card with:
+  - room
+  - topic
+  - date/time
+  - participants count
+
+7. Notifications and Reminders section
+- upcoming study reminders
+- missed notifications
+- quick reminder cards
+
+8. Quick stats strip
+Use 4-6 summary cards such as:
+- Active Rooms
+- Pending Reminders
+- Shared Files
+- Upcoming Sessions
+- New Messages
+- Weekly Study Hours placeholder
+
+9. Activity feed
+- room created
+- document uploaded
+- session scheduled
+- new discussion
+Use mock data only
+
+10. Sidebar navigation
+Create a clean sidebar with:
+- Dashboard
+- Study Rooms
+- Messages
+- Documents
+- Whiteboard
+- Sessions
+- Notifications
+- Settings
+
+Only Dashboard needs to be fully implemented now.
+Other routes can be scaffold pages with placeholders.
+
+==================================================
+INITIAL FEATURE DEFINITIONS TO REFLECT IN UI
+==================================================
+
+The dashboard and landing page must clearly represent these first-build features:
+
+1. Study Rooms
+Create and join virtual study rooms to collaborate with peers on specific subjects or topics.
+
+2. Real-Time Messaging
+Communicate with study group members using a real-time messaging system, enabling instant collaboration and discussion.
+
+3. Document Sharing
+Upload and share study materials, notes, and resources inside study rooms.
+
+4. Virtual Whiteboard
+Collaborate visually in real time to brainstorm ideas, solve problems, and explain concepts.
+
+5. Video Conferencing
+Support face-to-face study sessions and room discussions.
+
+6. Notifications and Reminders
+Help students stay organized and not miss sessions, deadlines, or important activity.
+
+Make the UI communicate these features even if backend logic is not implemented yet.
+
+==================================================
+ROUTING REQUIREMENTS
+==================================================
+
+Create these routes:
+
+/
+/login
+/dashboard
+/rooms
+/messages
+/documents
+/whiteboard
+/sessions
+/notifications
+/settings
+
+At this stage:
+- / and /login and /dashboard should be polished and functional
+- remaining pages can be nice placeholders with consistent layout and headings
+
+==================================================
+PROJECT STRUCTURE REQUIREMENTS
+==================================================
+
+Create a production-style structure like:
+
+frontend/
+  app/
+    page.tsx
+    login/page.tsx
+    dashboard/page.tsx
+    rooms/page.tsx
+    messages/page.tsx
+    documents/page.tsx
+    whiteboard/page.tsx
+    sessions/page.tsx
+    notifications/page.tsx
+    settings/page.tsx
+    layout.tsx
+  components/
+    landing/
+    dashboard/
+    shared/
+    ui/
+  lib/
+    auth/
+    utils/
+    constants/
+    mock/
+  hooks/
+  styles/
+
+backend/
+  node-api/
+    src/
+      routes/
+      controllers/
+      models/
+      services/
+      sockets/
+      middleware/
+      config/
+    package.json
+  ai-service/
+    app/
+      api/
+      services/
+      schemas/
+    requirements.txt
+
+Also add:
+- README.md
+- .env.example
+- clear comments where future backend integrations will connect
+
+==================================================
+DESIGN SYSTEM REQUIREMENTS
+==================================================
+
+Use:
+- shadcn/ui components wherever suitable
+- consistent spacing
+- strong typography hierarchy
+- modern card layouts
+- subtle gradients if they match the theme
+- responsive behavior for desktop/tablet/mobile
+- no clutter
+- no random colors
+- keep visual language cohesive
+
+Preferred look:
+- premium SaaS + edtech
+- slightly futuristic but practical
+- highly polished hero and dashboard cards
+- soft shadows
+- rounded corners
+- strong CTA buttons
+
+==================================================
+ENGINEERING REQUIREMENTS
+==================================================
+
+- Use TypeScript in frontend
+- Use reusable components
+- Avoid giant page files
+- Build with App Router best practices
+- Keep code clean and maintainable
+- Make sure navigation works
+- Mock data should be centralized
+- Create a basic auth guard utility
+- Ensure dashboard redirect works
+- Ensure landing page CTA buttons work
+- Make the project runnable
+
+==================================================
+WHAT NOT TO DO
+==================================================
+
+- Do not implement AI yet
+- Do not implement real backend APIs yet
+- Do not implement real sockets yet
+- Do not implement real video conferencing yet
+- Do not overbuild backend
+- Do not leave pages half-broken
+- Do not generate low-quality boilerplate
+- Do not ignore the provided HTML theme if available
+
+==================================================
+ACCEPTANCE CRITERIA
+==================================================
+
+By the end of Stage 1:
+- the original landing page/theme is successfully migrated or faithfully recreated in Next.js
+- the landing page is fully rebranded for StudySync AI
+- login page is implemented
+- dashboard page is implemented and visually strong
+- login redirects properly to dashboard
+- sidebar and placeholder routes exist
+- design feels premium and hackathon-demo ready
+- codebase is clean and ready for future backend integration
+- backend folder structure is scaffolded for:
+  - Node.js main backend
+  - FastAPI AI service later
+
+==================================================
+OUTPUT FORMAT
+==================================================
+
+Generate the full frontend-first codebase and all required files.
+If assets/theme files are found, integrate them properly.
+If not found, recreate the theme professionally.
+Make the result demo-ready. Understand it and start working

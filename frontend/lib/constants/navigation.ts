@@ -16,7 +16,7 @@ export const workspaceNavItems = [
     icon: LayoutDashboard,
   },
   {
-    label: "Study Rooms",
+    label: "Private Rooms",
     href: "/rooms",
     icon: UsersRound,
   },

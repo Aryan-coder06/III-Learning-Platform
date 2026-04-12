@@ -1,0 +1,527 @@
+Going to the core RAG core implementation ! Lets fire up the engine and go head with our first agentic system and also frontend bug fix You are continuing an existing hackathon codebase for a project called StudySync AI.
+
+Project vision:
+StudySync AI is a collaborative student workspace with rooms, discussions, resources, whiteboards, sessions, reminders, and later agentic AI. Right now the highest priority is RAG-first architecture and room-based knowledge retrieval, while also fixing and upgrading the current frontend shell.
+
+Main stack:
+- Frontend: Next.js + React + TypeScript + Tailwind CSS + shadcn/ui
+- Backend: FastAPI + Python
+- Database: MongoDB
+- Retrieval: hybrid RAG using BM25 + embeddings + FAISS
+- Agent orchestration later: LangGraph + LangChain
+- Current phase: frontend fixes + private room implementation + RAG backend foundation
+
+IMPORTANT:
+Do not overbuild all AI flows right now.
+Do not build all agents right now.
+Build the RAG-first architecture cleanly so LangGraph/LangChain can plug in next.
+
+==================================================
+CURRENT GOALS
+==================================================
+
+You must do 2 things in this stage:
+
+A. FRONTEND FIX + PRIVATE ROOM UPGRADE
+B. BACKEND RAG FOUNDATION FOR ROOM-BASED DYNAMIC KNOWLEDGE
+
+The main goal is to make "Private Room + Room RAG" the first real product feature.
+
+==================================================
+PART A — FRONTEND FIXES AND UPGRADES
+==================================================
+
+You must inspect the current dashboard and sidebar layout and fix these exact UI/UX issues:
+
+1. SIDEBAR SPACING ISSUE
+- The left section currently has too much empty spacing and looks detached from the page.
+- Make the main left navigation section feel directly connected to the left edge/sidebar.
+- Reduce the unnecessary outer padding/margin around the sidebar shell.
+- The sidebar should feel like a proper fixed app rail, not a floating white box with wasted space.
+
+2. SIDEBAR TOGGLE / HAMBURGER
+- Add a 3-line navigation toggle icon (hamburger menu) at the top-left area.
+- On desktop:
+  - allow collapsing/expanding the sidebar
+- On mobile/tablet:
+  - use sheet/drawer behavior
+- The state should be persisted cleanly in component state/local storage if needed.
+
+3. SIDEBAR TEXT VISIBILITY ISSUE
+- Some left navigation items are not visible because text is white and background is also white.
+- Fix all navigation contrast issues immediately.
+- Ensure all sidebar labels are clearly visible with proper contrast.
+- Use a clean, strong text color like black/dark slate and do not allow invisible labels.
+- Ensure hover/active state remains clearly readable.
+
+4. DASHBOARD COMPRESSION / LESS WASTED SPACE
+- Decrease excessive whitespace in the dashboard.
+- Reduce oversized card padding where needed.
+- Improve vertical rhythm.
+- Make the layout denser but still premium.
+- Keep the visual design modern and clean, but more useful and product-like.
+
+5. LEFT SIDEBAR CONNECTION TO CONTENT
+- The left navigation should visually connect to the app shell and content area better.
+- Use a proper app layout:
+  - fixed/collapsible sidebar
+  - top content header
+  - main scrollable content area
+- Avoid the “detached framed card” look on the left if it wastes space.
+
+==================================================
+PART B — PRIVATE ROOM AS THE FIRST REAL FEATURE
+==================================================
+
+Implement "Private Room" as the first serious product module.
+
+Definition:
+A Private Room is a focused collaboration space for a user or a small selected group. It is not a public/global room. It is used for:
+- private study discussions
+- focused topic work
+- notes/resources
+- file uploads
+- room-specific knowledge retrieval
+- later chat analysis and transcript workflows
+
+Private Room requirements:
+
+1. ROOM ENTITY
+Each private room should have:
+- room_id
+- title
+- description
+- room_type = private
+- created_by
+- member_ids
+- visibility = private
+- topic tags
+- created_at
+- updated_at
+
+2. ROOM UI
+Create a dedicated Private Room page route such as:
+- /rooms/[roomId]
+
+This page should include:
+- room header
+- room description
+- members
+- tabs or sections for:
+  - Discussion
+  - Resources
+  - Knowledge
+  - Activity
+
+3. PRIVATE ROOM CARD
+On dashboard and room list:
+- show room title
+- topic
+- member count
+- last activity
+- quick open button
+
+4. ROOM CREATION FLOW
+Add “Create Private Room” action.
+The form should include:
+- room name
+- description
+- invite/select members
+- optional tags/topic
+- create button
+
+Use mocked frontend state for now if backend route is not yet wired.
+
+==================================================
+PART C — RAG-FIRST BACKEND FOUNDATION
+==================================================
+
+Now build the backend with a ROOM-SCOPED RAG architecture.
+
+This is the most important part.
+
+The RAG system must work per private room.
+
+Meaning:
+- uploaded PDFs and files belong to a room
+- extracted chunks belong to a room
+- retrieval happens inside room context
+- answers should only use indexed knowledge from that room unless cross-room access is explicitly added later
+
+==================================================
+RAG PRODUCT BEHAVIOR
+==================================================
+
+Inside a private room, users should be able to:
+1. upload PDFs or notes
+2. have those documents processed
+3. ask questions inside that room
+4. receive grounded answers from that room’s uploaded resources
+5. see document/chunk source references
+
+Examples:
+- “What does our OS PDF say about deadlock?”
+- “Find where normalization is explained in our DBMS notes”
+- “What are the key formulas from the uploaded CN material?”
+
+This RAG should be the first real intelligence feature.
+
+==================================================
+DYNAMIC DATA REQUIREMENT
+==================================================
+
+This is critical:
+
+The system must be designed so RAG keeps working when new files are uploaded dynamically.
+
+That means:
+- new uploads should not require rebuilding the entire dataset
+- each uploaded document should be processed independently
+- only changed/new content should be chunked and indexed
+- retrieval should always use the latest indexed data for the selected room
+
+Design it as incremental RAG.
+
+Required logic:
+1. User uploads document to a room
+2. Save file locally
+3. Store document metadata in MongoDB
+4. Extract text
+5. Chunk text
+6. Store chunks in MongoDB
+7. Generate embeddings
+8. Insert chunk embeddings into vector index
+9. Mark document as indexed
+10. Room RAG queries should now include the new document automatically
+
+Also handle future update/delete flow cleanly:
+- if a document is replaced, old chunks must be invalidated or removed
+- if a document is deleted, its vector entries must not keep appearing in retrieval
+
+==================================================
+PDF STORAGE STRATEGY
+==================================================
+
+Do NOT store raw PDFs directly as primary data blobs inside normal Mongo documents.
+
+Use this approach:
+
+- Save physical PDF files under local storage for now:
+  storage/pdfs/{workspace_id}/{room_id}/{document_id}.pdf
+
+- Store only metadata in MongoDB:
+  - document_id
+  - room_id
+  - workspace_id
+  - filename
+  - file_path
+  - mime_type
+  - uploaded_by
+  - upload_time
+  - processing_status
+  - page_count
+  - chunk_count
+  - index_status
+
+This is required.
+
+==================================================
+MONGODB COLLECTIONS
+==================================================
+
+Create at least these collections:
+
+1. rooms
+- room_id
+- title
+- description
+- room_type
+- visibility
+- created_by
+- member_ids
+- tags
+- created_at
+- updated_at
+
+2. documents
+- document_id
+- room_id
+- workspace_id
+- filename
+- file_path
+- mime_type
+- uploaded_by
+- upload_time
+- processing_status
+- index_status
+- page_count
+- chunk_count
+- version
+
+3. document_chunks
+- chunk_id
+- document_id
+- room_id
+- page_number
+- chunk_index
+- text
+- normalized_text
+- embedding_model
+- created_at
+
+4. retrieval_runs
+- retrieval_run_id
+- room_id
+- query
+- top_k
+- results
+- created_at
+
+5. messages
+- message_id
+- room_id
+- sender_id
+- content
+- created_at
+- message_type
+
+6. agent_runs
+- agent_run_id
+- room_id
+- agent_type
+- input
+- output
+- status
+- created_at
+
+==================================================
+RAG IMPLEMENTATION REQUIREMENTS
+==================================================
+
+Implement a proper room-scoped hybrid RAG baseline.
+
+Use:
+- pdfplumber for PDF text extraction
+- chunking by paragraphs / grouped sections
+- BM25 for sparse retrieval
+- embeddings for dense retrieval
+- FAISS for vector similarity
+
+Use this retrieval logic:
+- filter by room_id first
+- retrieve relevant dense candidates
+- optionally retrieve sparse candidates
+- merge/rerank
+- return chunk text + source info
+
+The system must preserve source metadata:
+- room_id
+- document_id
+- page_number
+- chunk_id
+- filename
+
+Do not return fake summaries without retrieval grounding.
+
+==================================================
+LANGGRAPH / LANGCHAIN PREPARATION
+==================================================
+
+Do not fully implement all agents yet, but prepare the backend so the next stage can plug in:
+
+- rag_agent.py
+- room_context_builder.py
+- retriever.py
+- chunker.py
+- embeddings.py
+- vector_store.py
+
+Also create a scaffold for later orchestration:
+- graph/
+  - nodes/
+  - state.py
+  - rag_flow.py
+
+The first LangGraph-ready flow should conceptually support:
+- build room context
+- retrieve top chunks
+- generate grounded answer
+- log retrieval run
+
+Do not overcomplicate it yet.
+Just make the architecture ready.
+
+==================================================
+FASTAPI ROUTES TO BUILD NOW
+==================================================
+
+Create these routes:
+
+GET /health
+
+POST /api/rooms/private
+- create private room
+
+GET /api/rooms
+- list rooms
+
+GET /api/rooms/{room_id}
+- get room detail
+
+POST /api/rooms/{room_id}/documents/upload
+- upload PDF to room
+- save file locally
+- create document record
+- trigger or enqueue processing
+
+POST /api/rooms/{room_id}/documents/{document_id}/process
+- parse PDF
+- chunk it
+- store chunks
+- build embeddings/index entries
+- mark indexed
+
+GET /api/rooms/{room_id}/documents
+- list room documents
+
+POST /api/rooms/{room_id}/rag/query
+Request:
+{
+  "query": "What is deadlock prevention?",
+  "top_k": 5
+}
+
+Response:
+{
+  "room_id": "...",
+  "query": "...",
+  "results": [
+    {
+      "chunk_id": "...",
+      "document_id": "...",
+      "filename": "...",
+      "page_number": 4,
+      "text": "...",
+      "dense_score": 0.0,
+      "sparse_score": 0.0,
+      "final_score": 0.0
+    }
+  ],
+  "answer": "..."
+}
+
+==================================================
+FRONTEND RAG UI REQUIREMENTS
+==================================================
+
+Inside Private Room page, add a “Knowledge” section with:
+
+1. Upload Resource card
+- upload PDF
+- show upload state
+- show indexing state
+
+2. Room Knowledge Query panel
+- query textarea/input
+- ask button
+- loading state
+- grounded answer area
+- source cards below answer
+
+3. Resource list
+- filename
+- indexed/pending badge
+- page count if available
+- uploaded date
+
+4. Empty states
+- if no documents uploaded, show a nice prompt to upload first
+- do not leave blank sections
+
+==================================================
+FRONTEND PAGES TO FIX / CREATE
+==================================================
+
+You must update:
+
+1. Dashboard page
+- compress layout
+- reduce wasted space
+- improve cards
+- add Private Rooms section
+- add direct room open CTA
+
+2. Sidebar
+- fix text contrast
+- add hamburger toggle
+- improve layout attachment to page edge
+- ensure all nav items are visible
+
+3. Private Room page
+- create a polished room shell
+- include Discussion / Resources / Knowledge / Activity tabs or sections
+- focus on Knowledge tab being ready
+
+==================================================
+DESIGN REQUIREMENTS
+==================================================
+
+Keep the current premium visual direction, but improve usability.
+
+Must ensure:
+- no white text on white background
+- clean black/dark text on light surfaces
+- strong active nav state
+- better density
+- visually connected app shell
+- polished cards
+- mobile responsiveness
+
+==================================================
+ENGINEERING REQUIREMENTS
+==================================================
+
+- Use TypeScript on frontend
+- Use reusable components
+- Use shadcn/ui properly
+- Use FastAPI with pydantic schemas
+- Use service-based backend modules
+- Use MongoDB cleanly
+- Use local file storage for PDFs
+- Build room-scoped indexing cleanly
+- Make code easy to extend with LangGraph/LangChain next
+- Add basic logging
+- Add document processing states:
+  - uploaded
+  - processing
+  - indexed
+  - failed
+
+==================================================
+ACCEPTANCE CRITERIA
+==================================================
+
+By the end of this stage:
+
+FRONTEND:
+- sidebar spacing issue is fixed
+- sidebar text visibility issue is fixed
+- hamburger toggle exists
+- dashboard whitespace is reduced
+- dashboard has Private Rooms surfaced properly
+- private room page exists and looks polished
+
+BACKEND:
+- private room can be created
+- room-scoped PDF upload works
+- room-scoped PDF processing works
+- room-scoped chunk storage works
+- room-scoped RAG query works
+- dynamic uploads are supported through incremental indexing
+- architecture is ready for LangGraph/LangChain integration next
+
+IMPORTANT:
+Do not skip the frontend fixes.
+Do not only scaffold the room.
+Do not only scaffold RAG.
+Implement both the UI fixes and the room-scoped RAG foundation in one coherent stage. !

@@ -8,5 +8,7 @@ pnpm-lock.yaml
 frontend/pnpm-lock.yaml
 Swiss _ Design Prompts.html
 Swiss _ Design Prompts_files/
-
+.env
+.env.*
+backend/ai-service/.env
 
