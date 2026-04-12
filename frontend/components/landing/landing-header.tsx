@@ -14,7 +14,7 @@ export function LandingHeader() {
             width={420}
             height={90}
             priority
-            className="h-14 w-auto object-contain"
+            className="h-24 w-auto object-contain"
           />
           <div className="font-[var(--font-display)] text-4xl font-bold uppercase tracking-[-0.08em] text-foreground">
             StudySync
