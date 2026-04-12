@@ -2,13 +2,13 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAXdBYH6glY5U8gLVuDZEa_M1y1RU_ZBWw",
-  authDomain: "studysync-fbcda.firebaseapp.com",
-  projectId: "studysync-fbcda",
-  storageBucket: "studysync-fbcda.firebasestorage.app",
-  messagingSenderId: "351071677141",
-  appId: "1:351071677141:web:48f28617678af8cbb2505c",
-  measurementId: "G-C6S5HX5GFN"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase (SSR friendly)

@@ -117,7 +117,7 @@ export class RoomApiError extends Error {
   }
 }
 
-const NODE_API_URL = process.env.NEXT_PUBLIC_NODE_API_URL || "http://127.0.0.1:4000";
+const NODE_API_URL = process.env.NEXT_PUBLIC_NODE_API_URL;
 
 async function parseResponse<T>(response: Response): Promise<T> {
   if (response.ok) {

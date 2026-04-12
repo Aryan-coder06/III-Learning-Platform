@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { landingFeatures } from "@/lib/mock/landing";
@@ -17,28 +18,31 @@ export function FeaturesSection() {
           </h2>
         </div>
 
-        <div>
+        <div className="flex flex-col">
           {landingFeatures.map((feature, index) => (
-            <article
+            <Link
               key={feature.title}
-              className="group swiss-card-hover border-b-[4px] border-foreground p-10 transition-colors duration-300 last:border-b-0 hover:bg-accent hover:text-white md:p-12"
+              href={feature.href || "/login"}
+              className="group swiss-card-hover block border-b-[4px] border-foreground p-10 transition-colors duration-300 last:border-b-0 hover:bg-accent hover:text-white md:p-12"
             >
-              <div className="mb-6 flex items-center justify-between">
-                <span className="font-[var(--font-display)] text-4xl font-bold tracking-[-0.06em]">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <ArrowRight className="swiss-card-arrow h-8 w-8 -rotate-45 transition-transform duration-300" />
-              </div>
-              <h3 className="mb-4 font-[var(--font-display)] text-3xl font-bold uppercase tracking-[-0.05em]">
-                {feature.title}
-              </h3>
-              <p className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-accent transition-colors duration-300 group-hover:text-white/80">
-                {feature.benefit}
-              </p>
-              <p className="swiss-copy-fade max-w-xl text-lg leading-relaxed text-foreground/80 transition-colors duration-300">
-                {feature.description}
-              </p>
-            </article>
+              <article>
+                <div className="mb-6 flex items-center justify-between">
+                  <span className="font-[var(--font-display)] text-4xl font-bold tracking-[-0.06em]">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <ArrowRight className="swiss-card-arrow h-8 w-8 -rotate-45 transition-transform duration-300 group-hover:rotate-0" />
+                </div>
+                <h3 className="mb-4 font-[var(--font-display)] text-3xl font-bold uppercase tracking-[-0.05em]">
+                  {feature.title}
+                </h3>
+                <p className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-accent transition-colors duration-300 group-hover:text-white/80">
+                  {feature.benefit}
+                </p>
+                <p className="swiss-copy-fade max-w-xl text-lg leading-relaxed text-foreground/80 transition-colors duration-300 group-hover:text-white/70">
+                  {feature.description}
+                </p>
+              </article>
+            </Link>
           ))}
         </div>
       </div>
