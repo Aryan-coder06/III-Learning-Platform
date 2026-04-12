@@ -195,8 +195,11 @@ export function RoomsIndex() {
           </Card>
         ) : rooms.length > 0 ? (
           <div className="grid gap-4">
-            {rooms.map((room) => (
-              <Card key={room.roomId} className="overflow-hidden border border-border/70">
+            {rooms.map((room, roomIndex) => (
+              <Card
+                key={`${room.roomId || room.roomCode || "room"}-${roomIndex}`}
+                className="overflow-hidden border border-border/70"
+              >
                 <CardContent className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start">
                   <div className="space-y-4">
                     <div className="flex flex-wrap items-center gap-2">
@@ -215,9 +218,9 @@ export function RoomsIndex() {
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      {room.tags.map((tag) => (
+                      {room.tags.map((tag, tagIndex) => (
                         <span
-                          key={tag}
+                          key={`${room.roomId || room.roomCode}-tag-${tag}-${tagIndex}`}
                           className="rounded-full border border-border/70 bg-secondary/45 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground"
                         >
                           {tag}
@@ -247,9 +250,9 @@ export function RoomsIndex() {
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      {room.members.slice(0, 5).map((member) => (
+                      {room.members.slice(0, 5).map((member, memberIndex) => (
                         <span
-                          key={member.userId}
+                          key={`${room.roomId || room.roomCode}-member-${member.userId || member.email || memberIndex}`}
                           className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-white px-3 py-2 text-sm font-semibold text-foreground"
                         >
                           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-[0.68rem] uppercase text-muted-foreground">

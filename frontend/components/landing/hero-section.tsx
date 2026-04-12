@@ -64,6 +64,7 @@ export function HeroSection() {
                   alt="StudySync product preview"
                   fill
                   priority
+                  sizes="(min-width: 1024px) 28vw, 100vw"
                   className="object-cover"
                 />
               </div>

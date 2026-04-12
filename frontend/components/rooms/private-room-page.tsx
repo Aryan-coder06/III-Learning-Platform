@@ -478,7 +478,13 @@ export function PrivateRoomPage({ roomId }: { roomId: string }) {
   useEffect(() => {
     const socket = getSocket();
 
-    const onConnect = () => setConnected(true);
+    const onConnect = () => {
+      setConnected(true);
+      socket.emit("join_room", {
+        roomId,
+        actor: identity,
+      });
+    };
     const onDisconnect = () => setConnected(false);
     const onHistory = (history: ApiRoomMessage[]) => {
       setMessages(history);

@@ -40,6 +40,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${fontDisplay.variable} ${fontBody.variable} ${fontMono.variable} antialiased`}
+      data-scroll-behavior="smooth"
     >
       <body className="min-h-screen bg-background text-foreground">
         <AppProviders>{children}</AppProviders>

@@ -16,10 +16,20 @@ const documentRoutes = require("./routes/documentRoutes");
 const app = express();
 const server = http.createServer(app);
 
-// Keep corsOptions aligned with env for sockets
+// Keep corsOptions aligned with env for sockets and multi-device local testing.
+const allowedOrigins = new Set(env.clientUrls || [env.clientUrl]);
+const isProd = process.env.NODE_ENV === "production";
 const corsOptions = {
-    origin: env.clientUrl,
+    origin(origin, callback) {
+        // Allow same-origin/no-origin requests (curl, mobile webviews, server-side checks).
+        if (!origin) return callback(null, true);
+        // In local/hackathon mode, allow cross-device testing without strict host pinning.
+        if (!isProd) return callback(null, true);
+        if (allowedOrigins.has(origin)) return callback(null, true);
+        return callback(new Error(`Origin not allowed by CORS: ${origin}`));
+    },
     methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
 };
 
 // Middleware

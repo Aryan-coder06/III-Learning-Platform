@@ -117,7 +117,22 @@ export class RoomApiError extends Error {
   }
 }
 
-const NODE_API_URL = process.env.NEXT_PUBLIC_NODE_API_URL;
+function normalizeBase(url: string) {
+  return url.replace(/\/+$/, "").replace(/\/api$/, "");
+}
+
+function resolveNodeApiUrl() {
+  const envUrl = process.env.NEXT_PUBLIC_NODE_API_URL;
+  if (envUrl) {
+    return normalizeBase(envUrl);
+  }
+
+  if (typeof window !== "undefined") {
+    return `${window.location.protocol}//${window.location.hostname}:4000`;
+  }
+
+  return "http://localhost:4000";
+}
 
 async function parseResponse<T>(response: Response): Promise<T> {
   if (response.ok) {
@@ -144,7 +159,7 @@ export async function createPrivateRoomApi(payload: {
   owner: AppIdentity;
   members: AppIdentity[];
 }) {
-  const response = await fetch(`${NODE_API_URL}/api/rooms/private`, {
+  const response = await fetch(`${resolveNodeApiUrl()}/api/rooms/private`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -167,7 +182,7 @@ export async function listRoomsApi(payload: {
     search.set("member_id", payload.memberId);
   }
 
-  const response = await fetch(`${NODE_API_URL}/api/rooms?${search.toString()}`, {
+  const response = await fetch(`${resolveNodeApiUrl()}/api/rooms?${search.toString()}`, {
     method: "GET",
     cache: "no-store",
   });
@@ -177,7 +192,7 @@ export async function listRoomsApi(payload: {
 
 export async function getRoomDetailApi(roomId: string, userId: string) {
   const search = new URLSearchParams({ user_id: userId });
-  const response = await fetch(`${NODE_API_URL}/api/rooms/${roomId}?${search.toString()}`, {
+  const response = await fetch(`${resolveNodeApiUrl()}/api/rooms/${roomId}?${search.toString()}`, {
     method: "GET",
     cache: "no-store",
   });
@@ -189,7 +204,7 @@ export async function joinRoomByCodeApi(payload: {
   roomCode: string;
   actor: AppIdentity;
 }) {
-  const response = await fetch(`${NODE_API_URL}/api/rooms/join-by-code`, {
+  const response = await fetch(`${resolveNodeApiUrl()}/api/rooms/join-by-code`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -205,7 +220,7 @@ export async function inviteRoomMembersApi(payload: {
   actor: AppIdentity;
   emails: string[];
 }) {
-  const response = await fetch(`${NODE_API_URL}/api/rooms/${payload.roomId}/invites`, {
+  const response = await fetch(`${resolveNodeApiUrl()}/api/rooms/${payload.roomId}/invites`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -225,7 +240,7 @@ export async function listRoomMessagesApi(roomId: string, userId: string, limit 
     limit: String(limit),
   });
 
-  const response = await fetch(`${NODE_API_URL}/api/rooms/${roomId}/messages?${search.toString()}`, {
+  const response = await fetch(`${resolveNodeApiUrl()}/api/rooms/${roomId}/messages?${search.toString()}`, {
     method: "GET",
     cache: "no-store",
   });
@@ -235,7 +250,7 @@ export async function listRoomMessagesApi(roomId: string, userId: string, limit 
 
 export async function listRoomDocumentsApi(roomId: string, userId: string) {
   const search = new URLSearchParams({ user_id: userId });
-  const response = await fetch(`${NODE_API_URL}/api/documents/room/${roomId}?${search.toString()}`, {
+  const response = await fetch(`${resolveNodeApiUrl()}/api/documents/room/${roomId}?${search.toString()}`, {
     method: "GET",
     cache: "no-store",
   });
@@ -251,7 +266,7 @@ export async function uploadRoomDocumentApi(roomId: string, file: File, actor: A
   formData.append("uploaded_by_name", actor.name);
   formData.append("uploaded_by_user_id", actor.userId);
 
-  const response = await fetch(`${NODE_API_URL}/api/documents/upload`, {
+  const response = await fetch(`${resolveNodeApiUrl()}/api/documents/upload`, {
     method: "POST",
     body: formData,
   });
@@ -261,7 +276,7 @@ export async function uploadRoomDocumentApi(roomId: string, file: File, actor: A
 
 export async function processRoomDocumentApi(roomId: string, documentId: string, userId: string) {
   const response = await fetch(
-    `${NODE_API_URL}/api/documents/room/${roomId}/process/${documentId}?user_id=${encodeURIComponent(userId)}`,
+    `${resolveNodeApiUrl()}/api/documents/room/${roomId}/process/${documentId}?user_id=${encodeURIComponent(userId)}`,
     {
       method: "POST",
       headers: {
@@ -288,7 +303,7 @@ export async function queryRoomKnowledgeApi(
     }>;
   },
 ) {
-  const response = await fetch(`${NODE_API_URL}/api/rooms/${roomId}/rag/query`, {
+  const response = await fetch(`${resolveNodeApiUrl()}/api/rooms/${roomId}/rag/query`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
