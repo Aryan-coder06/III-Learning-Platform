@@ -8,6 +8,7 @@ import {
   PanelsTopLeft,
   Settings,
   UsersRound,
+  GraduationCap
 } from "lucide-react";
 
 export const workspaceNavItems = [
@@ -50,6 +51,11 @@ export const workspaceNavItems = [
     label: "Notifications",
     href: "/notifications",
     icon: BellRing,
+  },
+  {
+    label: "Skill Share",
+    href: "/skill-share",
+    icon: GraduationCap,
   },
   {
     label: "Settings",
