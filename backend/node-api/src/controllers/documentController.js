@@ -53,10 +53,31 @@ exports.uploadDocument = async (req, res) => {
     const document = new Document(documentData);
     await document.save();
 
-    // 3. Sync metadata to AI service
-    await syncDocumentToAiService(room_id, documentData);
+    // 3. Sync metadata to AI service (non-blocking for upload success)
+    let aiSync = { ok: true };
+    try {
+      await syncDocumentToAiService(room_id, documentData);
+    } catch (syncError) {
+      aiSync = {
+        ok: false,
+        status: syncError.status || 503,
+        error: syncError.message || "AI sync failed",
+      };
+      console.warn(
+        "AI sync failed for uploaded document %s in room %s: %s",
+        documentId,
+        room_id,
+        aiSync.error,
+      );
+    }
 
-    res.status(201).json(document);
+    res.status(201).json({
+      ...document.toObject(),
+      ai_sync: aiSync,
+      warning: aiSync.ok
+        ? undefined
+        : "Document uploaded, but AI indexing service is currently unavailable. Retry processing after AI service is healthy.",
+    });
   } catch (error) {
     console.error("Upload error:", error);
     res.status(error.status || 500).json({ error: error.message });
