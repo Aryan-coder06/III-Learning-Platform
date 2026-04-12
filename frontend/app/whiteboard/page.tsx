@@ -1,4 +1,4 @@
-import { WhiteboardPreview } from "@/components/whiteboard/whiteboard-preview";
+import { WhiteboardCanvas } from "@/components/whiteboard/whiteboard-canvas";
 import { WorkspaceShell } from "@/components/shared/workspace-shell";
 
 export default function WhiteboardPage() {
@@ -7,7 +7,7 @@ export default function WhiteboardPage() {
       title="Whiteboard"
       description="Collaborative sketching, board state sync, and live cursor sessions will attach to this canvas route."
     >
-      <WhiteboardPreview />
+      <WhiteboardCanvas />
     </WorkspaceShell>
   );
 }
