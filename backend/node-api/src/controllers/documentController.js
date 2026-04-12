@@ -90,13 +90,34 @@ exports.processDocument = async (req, res) => {
     const room = await requireRoom(room_id);
     assertMember(room, req.body.user_id || req.query.user_id);
 
+    const document = await Document.findOne({ document_id: document_id });
+    if (!document) {
+      return res.status(404).json({ error: `Document ${document_id} not found in Node DB.` });
+    }
+
     // Update status in MongoDB
     await Document.findOneAndUpdate(
       { document_id: document_id },
-      { processing_status: "processing", index_status: "processing" }
+      { processing_status: "processing", index_status: "processing" },
     );
 
-    const result = await processRoomDocument(room_id, document_id);
+    let result;
+    try {
+      result = await processRoomDocument(room_id, document_id);
+    } catch (error) {
+      // Recovery path: if AI service does not have this document yet, sync metadata and retry.
+      if (error.status === 404) {
+        const payload = document.toObject();
+        if (payload.upload_time instanceof Date) {
+          payload.upload_time = payload.upload_time.toISOString();
+        }
+        await syncDocumentToAiService(room_id, payload);
+        result = await processRoomDocument(room_id, document_id);
+      } else {
+        throw error;
+      }
+    }
+
     res.json(result);
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message });
