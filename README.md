@@ -277,18 +277,21 @@ npm run lint           # ESLint check
 
 | Variable | Purpose |
 |---|---|
-| `NEXT_PUBLIC_APP_URL` | Frontend URL |
-| `NEXT_PUBLIC_AI_SERVICE_URL` | AI service endpoint |
 | `NEXT_PUBLIC_NODE_API_URL` | Node API endpoint |
 | `NEXT_PUBLIC_SOCKET_URL` | Socket.IO endpoint |
+| `NEXT_PUBLIC_FIREBASE_*` | Firebase client config (optional) |
+| `PORT` | Node API port (Render uses `PORT`) |
+| `FRONTEND_URL` / `FRONTEND_URLS` | Allowed frontend origins for CORS |
 | `MONGO_URI` | MongoDB connection string (Node API) |
 | `AI_SERVICE_MONGO_URI` | MongoDB connection string (AI service) |
 | `GOOGLE_API_KEY` | Gemini API key for AI features |
+| `SARVAM_API_KEY` | Sarvam ASR key for transcript conversion |
+| `REDIS_ENABLED` / `REDIS_URL` | Socket.IO multi-instance pub/sub adapter |
 | `CLOUDINARY_CLOUD_NAME` / `_API_KEY` / `_API_SECRET` | Cloudinary credentials |
 | `EMBEDDING_MODEL` | Embedding model selector |
 | `GENERATION_MODEL` | LLM model selector (default: `gemini-2.5-flash`) |
 
-See [`.env.example`](.env.example) for the full list.
+See [`.env.example`](.env.example), [backend/node-api/.env.example](backend/node-api/.env.example), and [backend/ai-service/.env.example](backend/ai-service/.env.example).
 
 ---
 

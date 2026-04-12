@@ -3,6 +3,9 @@ const { env } = require("./env");
 
 const connectDB = async () => {
     try {
+        if (!env.mongoUri) {
+            throw new Error("MONGO_URI is not configured.");
+        }
         await mongoose.connect(env.mongoUri);
         console.log("MongoDB connected successfully");
     } catch (error) {

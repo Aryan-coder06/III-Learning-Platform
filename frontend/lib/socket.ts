@@ -10,11 +10,6 @@ function resolveSocketUrl() {
 
   const nodeApi = process.env.NEXT_PUBLIC_NODE_API_URL;
   if (nodeApi) return normalizeBase(nodeApi);
-
-  if (typeof window !== "undefined") {
-    return `${window.location.protocol}//${window.location.hostname}:4000`;
-  }
-
   return "";
 }
 

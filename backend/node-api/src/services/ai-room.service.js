@@ -24,6 +24,11 @@ async function parseResponse(response, fallbackMessage) {
 }
 
 async function syncPrivateRoom(room) {
+  if (!env.aiServiceUrl) {
+    const error = new Error("AI_SERVICE_URL is not configured.");
+    error.status = 500;
+    throw error;
+  }
   const response = await fetch(`${env.aiServiceUrl}/api/rooms/private/sync`, {
     method: "POST",
     headers: {
@@ -43,6 +48,11 @@ async function syncPrivateRoom(room) {
 }
 
 async function queryRoomKnowledge(roomId, payload) {
+  if (!env.aiServiceUrl) {
+    const error = new Error("AI_SERVICE_URL is not configured.");
+    error.status = 500;
+    throw error;
+  }
   const response = await fetch(`${env.aiServiceUrl}/api/rooms/${roomId}/rag/query`, {
     method: "POST",
     headers: {
@@ -55,6 +65,11 @@ async function queryRoomKnowledge(roomId, payload) {
 }
 
 async function listRoomDocuments(roomId) {
+  if (!env.aiServiceUrl) {
+    const error = new Error("AI_SERVICE_URL is not configured.");
+    error.status = 500;
+    throw error;
+  }
   const response = await fetch(`${env.aiServiceUrl}/api/rooms/${roomId}/documents`, {
     method: "GET",
   });
@@ -63,6 +78,11 @@ async function listRoomDocuments(roomId) {
 }
 
 async function uploadRoomDocument(roomId, formData) {
+  if (!env.aiServiceUrl) {
+    const error = new Error("AI_SERVICE_URL is not configured.");
+    error.status = 500;
+    throw error;
+  }
   const response = await fetch(`${env.aiServiceUrl}/api/rooms/${roomId}/documents/upload`, {
     method: "POST",
     body: formData,
@@ -72,6 +92,11 @@ async function uploadRoomDocument(roomId, formData) {
 }
 
 async function syncDocumentToAiService(roomId, documentData) {
+  if (!env.aiServiceUrl) {
+    const error = new Error("AI_SERVICE_URL is not configured.");
+    error.status = 500;
+    throw error;
+  }
   const response = await fetch(`${env.aiServiceUrl}/api/rooms/${roomId}/documents/sync`, {
     method: "POST",
     headers: {
@@ -84,6 +109,11 @@ async function syncDocumentToAiService(roomId, documentData) {
 }
 
 async function processRoomDocument(roomId, documentId) {
+  if (!env.aiServiceUrl) {
+    const error = new Error("AI_SERVICE_URL is not configured.");
+    error.status = 500;
+    throw error;
+  }
   const response = await fetch(
     `${env.aiServiceUrl}/api/rooms/${roomId}/documents/${documentId}/process`,
     {

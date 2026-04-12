@@ -7,6 +7,7 @@ import { WorkspaceSectionHeading } from "@/components/shared/workspace-section-h
 import { Card, CardContent } from "@/components/ui/card";
 import { SessionsSidebar } from "@/components/sessions/sessions-sidebar";
 import { ActivityFeed } from "@/components/notifications/activity-feed";
+import { SessionProgressWidget } from "@/components/dashboard/session-progress-widget";
 
 export function DashboardOverview() {
   const user = useAuthStore((state) => state.user);
@@ -31,6 +32,8 @@ export function DashboardOverview() {
         <ActivityFeed />
         <SessionsSidebar />
       </div>
+
+      <SessionProgressWidget />
     </div>
   );
 }

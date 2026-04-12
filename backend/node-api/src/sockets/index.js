@@ -1,4 +1,7 @@
 const socketIo = require("socket.io");
+const { createAdapter } = require("@socket.io/redis-adapter");
+const { createClient } = require("redis");
+const { env } = require("../config/env");
 
 const {
   DEFAULT_PUBLIC_ROOMS,
@@ -15,6 +18,41 @@ const {
   extractSyncBotQuery,
 } = require("../services/chat.service");
 const { queryRoomKnowledge } = require("../services/ai-room.service");
+
+async function setupRedisAdapter(io) {
+  if (!env.redisEnabled) {
+    return;
+  }
+
+  if (!env.redisUrl) {
+    console.warn("[socket] REDIS_ENABLED is true but REDIS_URL is missing. Using in-memory adapter.");
+    return;
+  }
+
+  const pubClient = createClient({ url: env.redisUrl });
+  const subClient = pubClient.duplicate();
+
+  pubClient.on("error", (error) => {
+    console.error("[socket] Redis pub client error:", error.message);
+  });
+  subClient.on("error", (error) => {
+    console.error("[socket] Redis sub client error:", error.message);
+  });
+
+  try {
+    await Promise.all([pubClient.connect(), subClient.connect()]);
+    io.adapter(createAdapter(pubClient, subClient));
+    console.log("[socket] Redis adapter enabled.");
+  } catch (error) {
+    console.error("[socket] Failed to initialize Redis adapter. Falling back to in-memory adapter.");
+    console.error(error.message || error);
+    try {
+      await Promise.allSettled([pubClient.quit(), subClient.quit()]);
+    } catch {
+      // ignore cleanup errors
+    }
+  }
+}
 
 async function resolveRoomForSocket(roomId) {
   const existing = await getRoom(roomId);
@@ -114,6 +152,7 @@ module.exports = (server, corsOptions) => {
   const io = socketIo(server, {
     cors: corsOptions,
   });
+  void setupRedisAdapter(io);
 
   io.on("connection", (socket) => {
     socket.on("join_room", async (payload) => {

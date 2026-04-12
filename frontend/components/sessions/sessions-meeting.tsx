@@ -12,14 +12,30 @@ import {
   Sparkles,
   Radio,
   MonitorPlay,
+  LoaderCircle,
+  Mic,
+  MicOff,
+  WandSparkles,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { useJitsi } from "@/hooks/use-jitsi";
+import { useLiveTranscript } from "@/hooks/use-live-transcript";
 import { useAuthStore } from "@/lib/auth/auth-store";
+import { identityFromUser } from "@/lib/auth/identity";
+import {
+  appendSessionTranscriptApi,
+  endSessionApi,
+  getLiveSessionInsightsApi,
+  startSessionApi,
+  type ApiSessionLiveInsights,
+  type ApiProgressUpdate,
+  type ApiSession,
+} from "@/lib/api/sessions";
 import { cn } from "@/lib/utils";
 
 function generateRoomSlug(): string {
@@ -53,14 +69,26 @@ function generateRoomSlug(): string {
   return `${adj}-${noun}-${num}`;
 }
 
+function generateMeetingKey(): string {
+  const raw =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID().replace(/-/g, "")
+      : `${Date.now()}${Math.floor(Math.random() * 1_000_000)}`;
+  return `mk_${raw.slice(0, 18)}`;
+}
+
 export function SessionsMeeting() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const actor = identityFromUser(user);
   const { startMeeting, endMeeting, loading, error, inCall } = useJitsi();
 
   const [roomName, setRoomName] = useState(
     () => searchParams.get("room") || generateRoomSlug(),
+  );
+  const [meetingKey, setMeetingKey] = useState(
+    () => searchParams.get("mk") || searchParams.get("room") || generateMeetingKey(),
   );
   const [displayName, setDisplayName] = useState(
     () => user?.name || "Study Buddy",
@@ -68,13 +96,55 @@ export function SessionsMeeting() {
   const [copied, setCopied] = useState(false);
   const [autoJoining, setAutoJoining] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
+  const [activeSession, setActiveSession] = useState<ApiSession | null>(null);
+  const [transcriptDraft, setTranscriptDraft] = useState("");
+  const [sarvamAudioUrl, setSarvamAudioUrl] = useState("");
+  const [sessionBusy, setSessionBusy] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [lastSummary, setLastSummary] = useState<ApiSession | null>(null);
+  const [lastProgressUpdates, setLastProgressUpdates] = useState<ApiProgressUpdate[]>([]);
+  const [liveInsights, setLiveInsights] = useState<ApiSessionLiveInsights | null>(null);
+  const [insightBusy, setInsightBusy] = useState(false);
+  const [uploadingChunk, setUploadingChunk] = useState(false);
 
   const jitsiContainerRef = useRef<HTMLDivElement>(null);
 
+  const handleTranscriptChunk = useCallback(
+    async (chunk: { text: string; startedAtMs: number | null; endedAtMs: number | null }) => {
+      setTranscriptDraft((current) => [current, chunk.text].filter(Boolean).join("\n"));
+      if (!activeSession) {
+        return;
+      }
+      setUploadingChunk(true);
+      try {
+        await appendSessionTranscriptApi(activeSession.sessionId, {
+          actor,
+          text: chunk.text,
+        });
+      } catch (err) {
+        setSessionError(
+          err instanceof Error ? err.message : "Failed to stream transcript chunk.",
+        );
+      } finally {
+        setUploadingChunk(false);
+      }
+    },
+    [activeSession, actor],
+  );
+
+  const {
+    supported: liveTranscriptSupported,
+    running: liveTranscriptRunning,
+    error: liveTranscriptError,
+    start: startLiveTranscript,
+    stop: stopLiveTranscript,
+  } = useLiveTranscript(handleTranscriptChunk);
+
   // Auto-join when coming from a shared link with ?room=
   const roomParam = searchParams.get("room");
+  const meetingParam = searchParams.get("mk") || searchParams.get("room");
   useEffect(() => {
-    if (roomParam && jitsiContainerRef.current && !inCall && !autoJoining) {
+    if (meetingParam && roomParam && jitsiContainerRef.current && !inCall && !autoJoining) {
       setAutoJoining(true);
       // Small delay to let the UI render first
       const timer = setTimeout(() => {
@@ -83,16 +153,33 @@ export function SessionsMeeting() {
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomParam]);
+  }, [meetingParam, roomParam]);
 
-  const handleJoinSession = useCallback(() => {
+  const handleJoinSession = useCallback(async () => {
     if (!jitsiContainerRef.current) return;
+
+    setSessionBusy(true);
+    setSessionError(null);
+    try {
+      const session = await startSessionApi({
+        actor,
+        roomName: meetingKey,
+        roomTitle: roomName,
+      });
+      setActiveSession(session);
+    } catch (err) {
+      setSessionError(
+        err instanceof Error ? err.message : "Could not start session in backend.",
+      );
+      setSessionBusy(false);
+      return;
+    }
 
     // Clear existing children in the container
     jitsiContainerRef.current.innerHTML = "";
 
     startMeeting({
-      roomName,
+      roomName: meetingKey,
       displayName,
       parentNode: jitsiContainerRef.current,
       onReadyToClose: () => {
@@ -100,21 +187,66 @@ export function SessionsMeeting() {
         setAutoJoining(false);
       },
     });
-  }, [roomName, displayName, startMeeting, endMeeting]);
+    setSessionBusy(false);
+  }, [meetingKey, roomName, displayName, startMeeting, endMeeting, actor]);
 
-  const handleLeaveSession = useCallback(() => {
-    endMeeting();
-    setAutoJoining(false);
-    // Remove the ?room= param on leave
-    router.replace("/sessions");
-  }, [endMeeting, router]);
+  const handleLeaveSession = useCallback(async () => {
+    setSessionBusy(true);
+    setSessionError(null);
+    try {
+      if (liveTranscriptRunning) {
+        stopLiveTranscript();
+      }
+      if (activeSession) {
+        const result = await endSessionApi(activeSession.sessionId, {
+          actor,
+          transcriptText: transcriptDraft,
+          sarvamAudioUrl,
+        });
+        setLastSummary(result.session);
+        setLastProgressUpdates(result.progressUpdates);
+        setActiveSession(null);
+        setTranscriptDraft("");
+      }
+      endMeeting();
+      setAutoJoining(false);
+      // Remove the ?room= param on leave
+      router.replace("/sessions");
+    } catch (err) {
+      setSessionError(
+        err instanceof Error ? err.message : "Could not finalize session summary.",
+      );
+    } finally {
+      setSessionBusy(false);
+    }
+  }, [endMeeting, router, activeSession, actor, transcriptDraft, sarvamAudioUrl, liveTranscriptRunning, stopLiveTranscript]);
+
+  async function handleLiveInsights() {
+    if (!activeSession) return;
+    setInsightBusy(true);
+    setSessionError(null);
+    try {
+      const insights = await getLiveSessionInsightsApi(activeSession.sessionId, {
+        actor,
+        transcriptText: transcriptDraft,
+        sarvamAudioUrl,
+      });
+      setLiveInsights(insights);
+    } catch (err) {
+      setSessionError(
+        err instanceof Error ? err.message : "Failed to generate live session insights.",
+      );
+    } finally {
+      setInsightBusy(false);
+    }
+  }
 
   // Compute shareUrl client-side only to avoid hydration mismatch
   useEffect(() => {
     setShareUrl(
-      `${window.location.origin}/sessions?room=${encodeURIComponent(roomName)}`,
+      `${window.location.origin}/sessions?room=${encodeURIComponent(roomName)}&mk=${encodeURIComponent(meetingKey)}`,
     );
-  }, [roomName]);
+  }, [roomName, meetingKey]);
 
   const handleCopy = useCallback(async () => {
     try {
@@ -182,7 +314,10 @@ export function SessionsMeeting() {
                     variant="outline"
                     size="icon"
                     className="h-14 w-14 shrink-0"
-                    onClick={() => setRoomName(generateRoomSlug())}
+                    onClick={() => {
+                      setRoomName(generateRoomSlug());
+                      setMeetingKey(generateMeetingKey());
+                    }}
                     title="Generate new room name"
                   >
                     <Sparkles className="h-4 w-4" />
@@ -210,19 +345,24 @@ export function SessionsMeeting() {
                   {error}
                 </div>
               )}
+              {sessionError ? (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                  {sessionError}
+                </div>
+              ) : null}
 
               <Button
                 id="start-session-btn"
                 variant="accent"
                 size="lg"
                 className="w-full"
-                onClick={handleJoinSession}
-                disabled={loading || !roomName.trim()}
+                onClick={() => void handleJoinSession()}
+                disabled={loading || sessionBusy || !roomName.trim()}
               >
-                {loading ? (
+                {loading || sessionBusy ? (
                   <>
-                    <Radio className="h-4 w-4 animate-pulse" />
-                    Connecting…
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                    Creating Session…
                   </>
                 ) : (
                   <>
@@ -334,15 +474,158 @@ export function SessionsMeeting() {
             <Button
               id="leave-session-btn"
               variant="outline"
-              onClick={handleLeaveSession}
+              onClick={() => void handleLeaveSession()}
+              disabled={sessionBusy}
               className="border-destructive/30 text-destructive hover:bg-destructive hover:text-white"
             >
-              <VideoOff className="h-4 w-4" />
-              Leave Session
+              {sessionBusy ? (
+                <>
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  Finalizing…
+                </>
+              ) : (
+                <>
+                  <VideoOff className="h-4 w-4" />
+                  End Session
+                </>
+              )}
             </Button>
           </CardContent>
         </Card>
       )}
+
+      {inCall ? (
+        <Card className="border border-border/70">
+          <CardHeader>
+            <CardTitle className="text-lg">Session Transcript Pipeline</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Phase 2 streams transcript chunks live to backend. You can also paste/edit
+              transcript manually before ending the session.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant={liveTranscriptRunning ? "outline" : "dark"}
+                onClick={liveTranscriptRunning ? stopLiveTranscript : startLiveTranscript}
+                disabled={!liveTranscriptSupported}
+              >
+                {liveTranscriptRunning ? (
+                  <>
+                    <MicOff className="h-4 w-4" />
+                    Stop Live Transcript
+                  </>
+                ) : (
+                  <>
+                    <Mic className="h-4 w-4" />
+                    Start Live Transcript
+                  </>
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void handleLiveInsights()}
+                disabled={insightBusy || !activeSession}
+              >
+                {insightBusy ? (
+                  <>
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                    Generating Insights
+                  </>
+                ) : (
+                  <>
+                    <WandSparkles className="h-4 w-4" />
+                    Live AI Insights
+                  </>
+                )}
+              </Button>
+              {uploadingChunk ? <Badge variant="subtle">syncing transcript...</Badge> : null}
+            </div>
+            {!liveTranscriptSupported ? (
+              <p className="text-xs text-muted-foreground">
+                Browser speech recognition not supported. Use manual transcript text or Sarvam audio URL.
+              </p>
+            ) : null}
+            {liveTranscriptError ? (
+              <p className="text-xs text-destructive">{liveTranscriptError}</p>
+            ) : null}
+            <Textarea
+              value={transcriptDraft}
+              onChange={(event) => setTranscriptDraft(event.target.value)}
+              placeholder="Paste transcript or meeting notes here. This is analyzed when you end the session."
+              className="min-h-[180px]"
+            />
+            <Input
+              value={sarvamAudioUrl}
+              onChange={(event) => setSarvamAudioUrl(event.target.value)}
+              placeholder="Optional: Sarvam audio URL for ASR fallback"
+            />
+            {activeSession ? (
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Session ID: {activeSession.sessionId}
+              </p>
+            ) : null}
+            {liveInsights ? (
+              <div className="space-y-2 rounded-xl border border-border/70 bg-secondary/45 p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Live summary
+                </p>
+                <p className="text-sm leading-6 text-foreground/90">{liveInsights.summary}</p>
+                {liveInsights.keyPoints.length > 0 ? (
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                    {liveInsights.keyPoints.slice(0, 4).map((point, index) => (
+                      <li key={`${liveInsights.sessionId}-live-${index}`}>{point}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {lastSummary ? (
+        <Card className="border border-border/70">
+          <CardHeader>
+            <CardTitle className="text-lg">Latest Session Summary</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm leading-7 text-foreground/90">{lastSummary.summary || "No summary available yet."}</p>
+            {lastSummary.keyPoints.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Key points
+                </p>
+                <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                  {lastSummary.keyPoints.map((point, index) => (
+                    <li key={`${lastSummary.sessionId}-kp-${index}`}>{point}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {lastProgressUpdates.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Progress updates extracted
+                </p>
+                <div className="grid gap-2">
+                  {lastProgressUpdates.map((update) => (
+                    <div key={update.progressUpdateId} className="rounded-xl border border-border/70 bg-secondary/45 p-3">
+                      <p className="text-sm font-semibold">{update.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Assigned to {update.userName} · confidence {(update.aiConfidence * 100).toFixed(0)}%
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Jitsi iframe container */}
       <div

@@ -40,6 +40,14 @@ class Settings(BaseSettings):
     default=None,
     validation_alias="GOOGLE_API_KEY",
   )
+  sarvam_api_key: str | None = Field(
+    default=None,
+    validation_alias="SARVAM_API_KEY",
+  )
+  sarvam_asr_url: str = Field(
+    default="https://api.sarvam.ai/speech-to-text",
+    validation_alias="SARVAM_ASR_URL",
+  )
   dense_vector_size: int = 3072
   dense_top_k: int = 12
   sparse_top_k: int = 12

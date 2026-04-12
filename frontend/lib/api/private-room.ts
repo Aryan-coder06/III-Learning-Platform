@@ -126,12 +126,7 @@ function resolveNodeApiUrl() {
   if (envUrl) {
     return normalizeBase(envUrl);
   }
-
-  if (typeof window !== "undefined") {
-    return `${window.location.protocol}//${window.location.hostname}:4000`;
-  }
-
-  return "http://localhost:4000";
+  throw new Error("NEXT_PUBLIC_NODE_API_URL is not configured");
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {

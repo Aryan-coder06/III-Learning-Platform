@@ -12,6 +12,7 @@ const roomRoutes = require("./routes/roomRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const contentRoutes = require("./routes/contentRoutes");
 const documentRoutes = require("./routes/documentRoutes");
+const sessionRoutes = require("./routes/sessionRoutes");
 
 const app = express();
 const server = http.createServer(app);
@@ -45,6 +46,7 @@ app.use("/api/rooms", roomRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/documents", documentRoutes);
+app.use("/api/sessions", sessionRoutes);
 
 // Health check
 app.get("/", (req, res) => {
