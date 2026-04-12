@@ -6,6 +6,7 @@ const {
 const {
   syncDocumentToAiService,
   processRoomDocument,
+  syncPrivateRoom,
 } = require("../services/ai-room.service");
 const { uploadToCloudinary } = require("../services/upload.service");
 const Document = require("../models/Document");
@@ -105,8 +106,9 @@ exports.processDocument = async (req, res) => {
     try {
       result = await processRoomDocument(room_id, document_id);
     } catch (error) {
-      // Recovery path: if AI service does not have this document yet, sync metadata and retry.
+      // Recovery path: if AI service does not have room/document yet, sync and retry.
       if (error.status === 404) {
+        await syncPrivateRoom(room);
         const payload = document.toObject();
         if (payload.upload_time instanceof Date) {
           payload.upload_time = payload.upload_time.toISOString();
