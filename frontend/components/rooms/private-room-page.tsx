@@ -1,30 +1,38 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
   BrainCircuit,
+  Copy,
   FileUp,
   LoaderCircle,
-  MessageSquareText,
   RefreshCw,
-  Sparkles,
   SendHorizontal,
+  Sparkles,
+  UsersRound,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 
 import {
+  getRoomDetailApi,
+  inviteRoomMembersApi,
   listRoomDocumentsApi,
+  listRoomMessagesApi,
   processRoomDocumentApi,
   queryRoomKnowledgeApi,
+  RoomApiError,
+  type ApiPrivateRoom,
   type ApiRagResponse,
   type ApiRoomDocument,
-  RoomApiError,
+  type ApiRoomMessage,
   uploadRoomDocumentApi,
 } from "@/lib/api/private-room";
 import { useAuthStore } from "@/lib/auth/auth-store";
-import { getMemberById, type RoomDiscussionEntry } from "@/lib/mock/rooms";
-import { useRoomStore } from "@/lib/rooms/room-store";
+import { identityFromUser } from "@/lib/auth/identity";
+import { getSocket } from "@/lib/socket";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,20 +40,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-const roomTabs = [
-  { id: "discussion", label: "Discussion", icon: MessageSquareText },
-  { id: "resources", label: "Resources", icon: FileUp },
-  { id: "knowledge", label: "Knowledge", icon: BrainCircuit },
-  { id: "activity", label: "Activity", icon: Sparkles },
-] as const;
+type SideTab = "knowledge" | "resources" | "activity";
 
-type RoomTab = (typeof roomTabs)[number]["id"];
-
-function formatRelativeNow() {
-  return new Date().toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function formatTimestamp(value: string) {
+  try {
+    return new Date(value).toLocaleString([], {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return value;
+  }
 }
 
 function summarizeSource(text: string, maxLength = 220) {
@@ -57,35 +64,38 @@ function summarizeSource(text: string, maxLength = 220) {
   return `${cleaned.slice(0, maxLength).trim()}...`;
 }
 
-function extractSyncBotPrompt(message: string) {
-  const mentionRegex = /@sync_bot\b/i;
-  if (!mentionRegex.test(message)) {
-    return null;
-  }
-
-  return message.replace(mentionRegex, "").trim();
+function recentMessagesForQuery(messages: ApiRoomMessage[]) {
+  return messages.slice(-8).map((message) => ({
+    sender_name: message.senderName,
+    message_type: message.messageType,
+    content: message.content,
+    timestamp: message.createdAt,
+  }));
 }
 
-function statusBadgeVariant(status: ApiRoomDocument["index_status"]) {
-  if (status === "indexed") {
-    return "default";
-  }
-
-  if (status === "processing") {
-    return "accent";
-  }
-
-  return "subtle";
-}
-
-function KnowledgePanel({
-  roomId,
-  backendReady,
+function KnowledgeSidebar({
+  room,
+  currentUserId,
+  recentMessages,
 }: {
-  roomId: string;
-  backendReady: boolean;
+  room: ApiPrivateRoom;
+  currentUserId: string;
+  recentMessages: ApiRoomMessage[];
 }) {
-  const user = useAuthStore((state) => state.user);
+  const actor = useMemo(
+    () => ({
+      userId: currentUserId,
+      name:
+        room.members.find((member) => member.userId === currentUserId)?.name ||
+        room.createdByName ||
+        "User",
+      email:
+        room.members.find((member) => member.userId === currentUserId)?.email ||
+        room.createdByEmail ||
+        `${currentUserId}@studysync.local`,
+    }),
+    [currentUserId, room],
+  );
   const [documents, setDocuments] = useState<ApiRoomDocument[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [documentsError, setDocumentsError] = useState<string | null>(null);
@@ -96,29 +106,25 @@ function KnowledgePanel({
   const [querying, setQuerying] = useState(false);
 
   const refreshDocuments = useCallback(async () => {
-    if (!backendReady) {
-      return;
-    }
-
     setDocumentsLoading(true);
     setDocumentsError(null);
 
     try {
-      const nextDocuments = await listRoomDocumentsApi(roomId);
+      const nextDocuments = await listRoomDocumentsApi(room.roomId, currentUserId);
       setDocuments(nextDocuments);
     } catch (error) {
       setDocumentsError(
-        error instanceof Error
-          ? error.message
-          : "Could not load room documents from the backend service.",
+        error instanceof Error ? error.message : "Could not load room documents.",
       );
     } finally {
       setDocumentsLoading(false);
     }
-  }, [backendReady, roomId]);
+  }, [currentUserId, room.roomId]);
 
   useEffect(() => {
-    void refreshDocuments();
+    queueMicrotask(() => {
+      void refreshDocuments();
+    });
   }, [refreshDocuments]);
 
   async function handleUpload() {
@@ -131,13 +137,8 @@ function KnowledgePanel({
     setDocumentsError(null);
 
     try {
-      const uploadedDocument = await uploadRoomDocumentApi(
-        roomId,
-        selectedFile,
-        user?.email ?? "demo@studysync.ai",
-      );
-
-      await processRoomDocumentApi(roomId, uploadedDocument.document_id);
+      const uploadedDocument = await uploadRoomDocumentApi(room.roomId, selectedFile, actor);
+      await processRoomDocumentApi(room.roomId, uploadedDocument.document_id, currentUserId);
       setSelectedFile(null);
       await refreshDocuments();
     } catch (error) {
@@ -151,11 +152,10 @@ function KnowledgePanel({
     }
   }
 
-  async function handleQuery(event: React.FormEvent<HTMLFormElement>) {
+  async function handleExplicitQuery(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     if (!query.trim()) {
-      setDocumentsError("Enter a grounded room question before querying.");
+      setDocumentsError("Enter a room question before querying.");
       return;
     }
 
@@ -163,16 +163,18 @@ function KnowledgePanel({
     setDocumentsError(null);
 
     try {
-      const response = await queryRoomKnowledgeApi(roomId, {
+      const response = await queryRoomKnowledgeApi(room.roomId, {
         query: query.trim(),
         top_k: 5,
+        actor,
+        recent_messages: recentMessagesForQuery(recentMessages),
       });
       setRagResponse(response);
     } catch (error) {
       setDocumentsError(
         error instanceof RoomApiError
           ? error.message
-          : "Room retrieval failed. Check the FastAPI service and room state.",
+          : "Room retrieval failed. Check the AI service and indexed resources.",
       );
     } finally {
       setQuerying(false);
@@ -181,334 +183,451 @@ function KnowledgePanel({
 
   const indexedDocuments = documents.filter((document) => document.index_status === "indexed");
 
-  if (!backendReady) {
-    return (
-      <Card className="border border-dashed border-border/70 bg-secondary/45">
-        <CardContent className="space-y-3 p-4">
-          <Badge variant="subtle">Backend connection required</Badge>
-          <h4 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[-0.05em]">
-            Knowledge indexing unlocks on synced rooms
-          </h4>
-          <p className="text-sm leading-6 text-muted-foreground">
-            This seeded room is a frontend demo room. Create a new private room while
-            the FastAPI service is running to upload PDFs, process chunks, and ask
-            grounded room-scoped questions here.
-          </p>
-          <Button asChild variant="dark">
-            <Link href="/rooms">
-              Create backend room
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
+  return (
+    <div className="space-y-4">
+      <Card className="border border-border/70">
+        <CardContent className="space-y-4 p-4">
+          <div className="space-y-2">
+            <Badge variant="accent">Upload Resource</Badge>
+            <h4 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[-0.05em]">
+              Feed the room
+            </h4>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Upload PDFs or notes so the room assistant can answer with grounded context.
+            </p>
+          </div>
+
+          <Input
+            type="file"
+            accept="application/pdf"
+            onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+            className="file:mr-4 file:rounded-full file:border-0 file:bg-accent file:px-4 file:py-2 file:text-sm file:font-semibold file:text-accent-foreground"
+          />
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button variant="dark" onClick={handleUpload} disabled={uploading}>
+              {uploading ? (
+                <>
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  Uploading
+                </>
+              ) : (
+                <>
+                  <FileUp className="h-4 w-4" />
+                  Upload PDF
+                </>
+              )}
+            </Button>
+            <Button variant="outline" onClick={() => void refreshDocuments()} disabled={documentsLoading}>
+              <RefreshCw className={cn("h-4 w-4", documentsLoading && "animate-spin")} />
+              Refresh
+            </Button>
+          </div>
+
+          {documentsError ? (
+            <div className="rounded-[1rem] border border-destructive/25 bg-[#fff1ed] px-4 py-3 text-sm leading-6 text-destructive">
+              {documentsError}
+            </div>
+          ) : null}
         </CardContent>
       </Card>
-    );
-  }
+
+      <Card className="border border-border/70">
+        <CardContent className="space-y-4 p-4">
+          <div className="space-y-2">
+            <Badge variant="accent">Room Knowledge</Badge>
+            <h4 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[-0.05em]">
+              Ask explicitly
+            </h4>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Chat is the main surface. This panel is useful when you want a focused one-off answer.
+            </p>
+          </div>
+
+          <form className="space-y-3" onSubmit={handleExplicitQuery}>
+            <Textarea
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Summarize the uploaded notes and explain the main idea simply."
+              className="min-h-[110px]"
+            />
+            <Button
+              type="submit"
+              variant="dark"
+              className="w-full"
+              disabled={querying || indexedDocuments.length === 0}
+            >
+              {querying ? (
+                <>
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  Querying room
+                </>
+              ) : (
+                <>
+                  <BrainCircuit className="h-4 w-4" />
+                  Ask room knowledge
+                </>
+              )}
+            </Button>
+          </form>
+
+          {ragResponse ? (
+            <div className="space-y-3">
+              <div className="rounded-[1.15rem] border border-border/70 bg-secondary/45 p-4">
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Intent
+                </p>
+                <p className="mt-2 font-semibold text-foreground">{ragResponse.intent || "grounded answer"}</p>
+                <p className="mt-3 whitespace-pre-line text-sm leading-6 text-muted-foreground">
+                  {ragResponse.answer}
+                </p>
+              </div>
+              {ragResponse.results.slice(0, 3).map((result) => (
+                <div
+                  key={result.chunk_id}
+                  className="rounded-[1rem] border border-border/70 bg-white px-4 py-3 text-sm text-muted-foreground"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="subtle">{result.filename}</Badge>
+                    <Badge variant="outline">Page {result.page_number}</Badge>
+                  </div>
+                  <p className="mt-2 leading-6">{result.excerpt || summarizeSource(result.text, 240)}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-[1rem] border border-dashed border-border/70 bg-secondary/45 px-4 py-4 text-sm leading-6 text-muted-foreground">
+              {indexedDocuments.length === 0
+                ? "Index at least one document, then ask the room assistant here or in chat."
+                : "Prefer asking @SYNC_BOT directly in chat for the most natural collaborative flow."}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border border-border/70">
+        <CardContent className="space-y-3 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h4 className="font-[var(--font-display)] text-xl font-bold uppercase tracking-[-0.05em]">
+                Indexed resources
+              </h4>
+              <p className="text-sm text-muted-foreground">Room document list and indexing state.</p>
+            </div>
+            <Badge variant="subtle">{documents.length} docs</Badge>
+          </div>
+
+          {documents.length > 0 ? (
+            documents.map((document) => (
+              <div
+                key={document.document_id}
+                className="rounded-[1rem] border border-border/70 bg-secondary/45 px-4 py-3"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold text-foreground">{document.filename}</p>
+                  <Badge variant={document.index_status === "indexed" ? "default" : "subtle"}>
+                    {document.index_status}
+                  </Badge>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {document.page_count > 0 ? `${document.page_count} pages` : "Pending pages"} ·{" "}
+                  {document.chunk_count} chunks
+                </p>
+              </div>
+            ))
+          ) : (
+            <div className="rounded-[1rem] border border-dashed border-border/70 bg-secondary/45 px-4 py-4 text-sm leading-6 text-muted-foreground">
+              No resources uploaded yet. Feed the room before using grounded help.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function MessageBubble({
+  message,
+  currentUserId,
+}: {
+  message: ApiRoomMessage;
+  currentUserId: string;
+}) {
+  const isOwn = message.senderId === currentUserId;
+  const isBot = message.messageType === "bot";
+  const isSystem = message.messageType === "system";
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-      <div className="space-y-4">
-        <Card>
-          <CardContent className="space-y-4 p-4">
-            <div className="space-y-2">
-              <Badge variant="accent">Upload Resource</Badge>
-              <h4 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[-0.05em]">
-                Add room PDFs
-              </h4>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Upload a PDF, store it locally, process it incrementally, and make it
-                immediately retrievable inside this room.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <Input
-                type="file"
-                accept="application/pdf"
-                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-                className="file:mr-4 file:rounded-full file:border-0 file:bg-accent file:px-4 file:py-2 file:text-sm file:font-semibold file:text-accent-foreground"
-              />
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button variant="dark" onClick={handleUpload} disabled={uploading}>
-                  {uploading ? (
-                    <>
-                      <LoaderCircle className="h-4 w-4 animate-spin" />
-                      Uploading and indexing
-                    </>
-                  ) : (
-                    <>
-                      <FileUp className="h-4 w-4" />
-                      Upload and index
-                    </>
-                  )}
-                </Button>
-                <Button variant="outline" onClick={() => void refreshDocuments()} disabled={documentsLoading}>
-                  <RefreshCw className={cn("h-4 w-4", documentsLoading && "animate-spin")} />
-                  Refresh
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="space-y-4 p-4">
-            <div className="space-y-2">
-              <Badge variant="accent">Resources</Badge>
-              <h4 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[-0.05em]">
-                Room document list
-              </h4>
-            </div>
-
-            {documentsLoading ? (
-              <div className="rounded-[1.2rem] border border-border/70 bg-secondary/45 px-4 py-5 text-sm text-muted-foreground">
-                Loading room documents...
-              </div>
-            ) : documents.length > 0 ? (
-              <div className="space-y-3">
-                {documents.map((document) => (
-                  <div
-                    key={document.document_id}
-                    className="rounded-[1.25rem] border border-border/70 bg-secondary/45 px-4 py-4"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-foreground">{document.filename}</p>
-                        <p className="text-sm leading-6 text-muted-foreground">
-                          {document.page_count > 0
-                            ? `${document.page_count} pages`
-                            : "Waiting for page count"}{" "}
-                          · {document.chunk_count} chunks
-                        </p>
-                      </div>
-                      <Badge variant={statusBadgeVariant(document.index_status)}>
-                        {document.index_status}
-                      </Badge>
-                    </div>
-                    <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                      Uploaded {new Date(document.upload_time).toLocaleString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-[1.2rem] border border-dashed border-border/70 bg-secondary/45 px-4 py-5 text-sm leading-6 text-muted-foreground">
-                No PDFs indexed in this room yet. Upload a room resource to activate the
-                knowledge panel.
-              </div>
+    <div
+      className={cn(
+        "max-w-[86%] rounded-[1.35rem] border px-4 py-3",
+        isBot
+          ? "border-sidebar bg-sidebar text-sidebar-foreground"
+          : isSystem
+            ? "mx-auto w-full max-w-full border-border/70 bg-secondary/45 text-foreground"
+            : isOwn
+              ? "ml-auto border-accent/20 bg-accent/8"
+              : "border-border/70 bg-white",
+      )}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              "text-sm font-semibold",
+              isBot ? "text-sidebar-foreground" : "text-foreground",
             )}
-          </CardContent>
-        </Card>
+          >
+            {message.senderName}
+          </span>
+          {isBot ? <Badge variant="accent">SYNC_BOT</Badge> : null}
+          {isSystem ? <Badge variant="subtle">System</Badge> : null}
+        </div>
+        <span
+          className={cn(
+            "text-xs font-semibold uppercase tracking-[0.18em]",
+            isBot ? "text-sidebar-foreground/56" : "text-muted-foreground",
+          )}
+        >
+          {formatTimestamp(message.createdAt)}
+        </span>
       </div>
 
-      <div className="space-y-4">
-        <Card className="border border-border/70">
-          <CardContent className="space-y-4 p-4">
-            <div className="space-y-2">
-              <Badge variant="accent">Room Knowledge Query</Badge>
-              <h4 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[-0.05em]">
-                Ask this room
-              </h4>
+      <p
+        className={cn(
+          "mt-3 whitespace-pre-line text-sm leading-6",
+          isBot ? "text-sidebar-foreground/78" : "text-muted-foreground",
+        )}
+      >
+        {message.content}
+      </p>
+
+      {message.sources?.length ? (
+        <div className="mt-4 space-y-2">
+          {message.sources.map((source) => (
+            <div
+              key={`${message.messageId}-${source.chunkId}`}
+              className={cn(
+                "rounded-[1rem] border px-3 py-3 text-sm",
+                isBot
+                  ? "border-sidebar-foreground/12 bg-white/[0.06] text-sidebar-foreground/76"
+                  : "border-border/70 bg-secondary/45 text-muted-foreground",
+              )}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={isBot ? "accent" : "subtle"}>{source.filename}</Badge>
+                <Badge variant="outline">Page {source.pageNumber}</Badge>
+              </div>
+              <p className="mt-2 leading-6">{source.excerpt}</p>
             </div>
-
-            <form className="space-y-3" onSubmit={handleQuery}>
-              <Textarea
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="What does our OS PDF say about deadlock prevention?"
-                className="min-h-[150px]"
-              />
-              <Button
-                type="submit"
-                variant="dark"
-                className="w-full sm:w-auto"
-                disabled={querying || indexedDocuments.length === 0}
-              >
-                {querying ? (
-                  <>
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                    Querying room
-                  </>
-                ) : (
-                  <>
-                    <BrainCircuit className="h-4 w-4" />
-                    Ask knowledge layer
-                  </>
-                )}
-              </Button>
-            </form>
-
-            {documentsError ? (
-              <div className="rounded-[1.2rem] border border-destructive/25 bg-[#fff1ed] px-4 py-3 text-sm leading-6 text-destructive">
-                {documentsError}
-              </div>
-            ) : null}
-
-            {ragResponse ? (
-              <div className="space-y-4">
-                <div className="rounded-[1.35rem] border border-border/70 bg-secondary/45 p-4">
-                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    Grounded answer
-                  </p>
-                  <p className="mt-3 whitespace-pre-line text-sm leading-7 text-foreground">
-                    {ragResponse.answer}
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                {ragResponse.results.map((result) => (
-                    <div
-                      key={result.chunk_id}
-                      className="rounded-[1.25rem] border border-border/70 bg-white p-4"
-                    >
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="subtle">{result.filename}</Badge>
-                        <Badge variant="outline">Page {result.page_number}</Badge>
-                      </div>
-                      <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                        {summarizeSource(result.text, 320)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-[1.2rem] border border-dashed border-border/70 bg-secondary/45 px-4 py-5 text-sm leading-6 text-muted-foreground">
-                {indexedDocuments.length === 0
-                  ? "Index at least one PDF in this room, then ask grounded questions here."
-                  : "Ask a room-specific question to see grounded passages and source references."}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
 
 export function PrivateRoomPage({ roomId }: { roomId: string }) {
-  const room = useRoomStore((state) => state.rooms.find((entry) => entry.roomId === roomId));
-  const addDiscussionEntry = useRoomStore((state) => state.addDiscussionEntry);
   const user = useAuthStore((state) => state.user);
-  const [activeTab, setActiveTab] = useState<RoomTab>("discussion");
-  const [chatDraft, setChatDraft] = useState("");
-  const [botLoading, setBotLoading] = useState(false);
+  const identity = useMemo(() => identityFromUser(user), [user]);
+  const [room, setRoom] = useState<ApiPrivateRoom | null>(null);
+  const [messages, setMessages] = useState<ApiRoomMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [connected, setConnected] = useState(false);
+  const [botTyping, setBotTyping] = useState(false);
+  const [inviteEmails, setInviteEmails] = useState("");
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteFeedback, setInviteFeedback] = useState<string | null>(null);
+  const [sideTab, setSideTab] = useState<SideTab>("knowledge");
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const members = useMemo(
-    () => room?.memberIds.map((memberId) => getMemberById(memberId)).filter(Boolean) ?? [],
-    [room],
-  );
-  const currentMember =
-    members.find((member) => member?.name.toLowerCase() === user?.name?.toLowerCase()) ??
-    getMemberById(room?.createdBy ?? "user-aryan");
+  const loadRoom = useCallback(async () => {
+    setLoading(true);
+    setError(null);
 
-  async function handleSendMessage(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!room || !chatDraft.trim()) {
-      return;
+    try {
+      const [roomDetail, roomHistory] = await Promise.all([
+        getRoomDetailApi(roomId, identity.userId),
+        listRoomMessagesApi(roomId, identity.userId),
+      ]);
+      setRoom(roomDetail);
+      setMessages(roomHistory);
+    } catch (loadError) {
+      setError(
+        loadError instanceof RoomApiError
+          ? loadError.message
+          : "Could not load this room right now.",
+      );
+    } finally {
+      setLoading(false);
     }
+  }, [identity.userId, roomId]);
 
-    const content = chatDraft.trim();
-    const messageId = `discussion-${room.roomId}-${Date.now()}`;
-    const authorId = currentMember?.id ?? room.createdBy;
-    const authorLabel = currentMember?.name ?? user?.name ?? "You";
+  useEffect(() => {
+    queueMicrotask(() => {
+      void loadRoom();
+    });
+  }, [loadRoom]);
 
-    const userEntry: RoomDiscussionEntry = {
-      id: messageId,
-      authorId,
-      authorType: "member",
-      authorLabel,
-      content,
-      createdAt: formatRelativeNow(),
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, botTyping]);
+
+  useEffect(() => {
+    const socket = getSocket();
+
+    const onConnect = () => setConnected(true);
+    const onDisconnect = () => setConnected(false);
+    const onHistory = (history: ApiRoomMessage[]) => {
+      setMessages(history);
+      setBotTyping(false);
+    };
+    const onMessage = (message: ApiRoomMessage) => {
+      if (message.roomId !== roomId) {
+        return;
+      }
+      setMessages((current) => [...current, message]);
+      setBotTyping(false);
+      void loadRoom();
+    };
+    const onBotTyping = (payload: { roomId: string }) => {
+      if (payload.roomId === roomId) {
+        setBotTyping(true);
+      }
+    };
+    const onError = (payload: { error: string }) => {
+      setError(payload.error);
+      setBotTyping(false);
     };
 
-    addDiscussionEntry(room.roomId, userEntry);
-    setChatDraft("");
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("chat_history", onHistory);
+    socket.on("receive_message", onMessage);
+    socket.on("bot_typing", onBotTyping);
+    socket.on("message_error", onError);
 
-    const botPrompt = extractSyncBotPrompt(content);
-    if (botPrompt === null) {
-      return;
+    if (!socket.connected) {
+      socket.connect();
+    } else {
+      setConnected(true);
     }
 
-    setBotLoading(true);
+    socket.emit("join_room", {
+      roomId,
+      actor: identity,
+    });
 
-    if (!room.backendReady) {
-      addDiscussionEntry(room.roomId, {
-        id: `${messageId}-bot-offline`,
-        authorId: "sync-bot",
-        authorType: "bot",
-        authorLabel: "SYNC_BOT",
-        content:
-          "This room is local-only right now. Start the backend, create a backend-connected room, upload a PDF in Knowledge, then tag me again.",
-        createdAt: formatRelativeNow(),
-      });
-      setBotLoading(false);
-      return;
-    }
+    return () => {
+      socket.emit("leave_room", { roomId });
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("chat_history", onHistory);
+      socket.off("receive_message", onMessage);
+      socket.off("bot_typing", onBotTyping);
+      socket.off("message_error", onError);
+    };
+  }, [identity, loadRoom, roomId]);
 
-    if (!botPrompt) {
-      addDiscussionEntry(room.roomId, {
-        id: `${messageId}-bot-empty`,
-        authorId: "sync-bot",
-        authorType: "bot",
-        authorLabel: "SYNC_BOT",
-        content: "Tag me with a direct question, for example: @SYNC_BOT what does the uploaded PDF say about deadlock prevention?",
-        createdAt: formatRelativeNow(),
-      });
-      setBotLoading(false);
+  async function handleCopyCode() {
+    if (!room) {
       return;
     }
 
     try {
-      const response = await queryRoomKnowledgeApi(room.roomId, {
-        query: botPrompt,
-        top_k: 4,
-      });
-
-      addDiscussionEntry(room.roomId, {
-        id: `${messageId}-bot`,
-        authorId: "sync-bot",
-        authorType: "bot",
-        authorLabel: "SYNC_BOT",
-        content: response.answer,
-        createdAt: formatRelativeNow(),
-        sources: response.results.slice(0, 3).map((result) => ({
-          chunkId: result.chunk_id,
-          filename: result.filename,
-          pageNumber: result.page_number,
-          excerpt: summarizeSource(result.text),
-        })),
-      });
-    } catch (error) {
-      addDiscussionEntry(room.roomId, {
-        id: `${messageId}-bot-error`,
-        authorId: "sync-bot",
-        authorType: "bot",
-        authorLabel: "SYNC_BOT",
-        content:
-          error instanceof RoomApiError
-            ? error.message
-            : "I could not query the room knowledge layer right now.",
-        createdAt: formatRelativeNow(),
-      });
-    } finally {
-      setBotLoading(false);
+      await navigator.clipboard.writeText(room.roomCode);
+    } catch {
+      setError("Clipboard access failed. Copy the room code manually.");
     }
+  }
+
+  async function handleInvite(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!room) {
+      return;
+    }
+
+    const emails = inviteEmails
+      .split(/[,\n]/)
+      .map((email) => email.trim())
+      .filter(Boolean);
+
+    if (emails.length === 0) {
+      setInviteFeedback("Enter at least one email address.");
+      return;
+    }
+
+    setInviteLoading(true);
+    setInviteFeedback(null);
+
+    try {
+      const result = await inviteRoomMembersApi({
+        roomId: room.roomId,
+        actor: identity,
+        emails,
+      });
+      setInviteFeedback(
+        `${result.count} invite${result.count > 1 ? "s" : ""} prepared. Share room code ${room.roomCode} as well.`,
+      );
+      setInviteEmails("");
+      await loadRoom();
+    } catch (inviteError) {
+      setInviteFeedback(
+        inviteError instanceof RoomApiError
+          ? inviteError.message
+          : "Could not create invites right now.",
+      );
+    } finally {
+      setInviteLoading(false);
+    }
+  }
+
+  function handleSendMessage(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const content = draft.trim();
+    if (!content) {
+      return;
+    }
+
+    const socket = getSocket();
+    socket.emit("send_message", {
+      roomId,
+      senderId: identity.userId,
+      senderName: identity.name,
+      senderEmail: identity.email,
+      content,
+      messageType: "human",
+    });
+    setDraft("");
+    if (/@sync_bot\b/i.test(content)) {
+      setBotTyping(true);
+    }
+  }
+
+  if (loading) {
+    return (
+      <Card className="border border-border/70">
+        <CardContent className="flex items-center gap-3 p-5 text-sm text-muted-foreground">
+          <LoaderCircle className="h-4 w-4 animate-spin" />
+          Loading room workspace...
+        </CardContent>
+      </Card>
+    );
   }
 
   if (!room) {
     return (
       <Card className="border border-dashed border-border/70 bg-secondary/45">
         <CardContent className="space-y-4 p-5">
-          <Badge variant="subtle">Room not found</Badge>
+          <Badge variant="subtle">Room not available</Badge>
           <div>
             <h2 className="font-[var(--font-display)] text-3xl font-bold uppercase tracking-[-0.06em]">
-              This private room does not exist in local state
+              This private room could not be loaded
             </h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Create a new private room or reopen one from the room list to continue.
+              Join with a valid room code or reopen a room from the directory.
             </p>
           </div>
           <Button asChild variant="dark">
@@ -525,20 +644,21 @@ export function PrivateRoomPage({ roomId }: { roomId: string }) {
   return (
     <div className="space-y-4">
       <Card className="overflow-hidden border border-border/70">
-        <CardContent className="grid gap-4 p-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <CardContent className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-center">
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="accent">Private Room</Badge>
-              <Badge variant={room.backendReady ? "default" : "subtle"}>
-                {room.backendReady ? "FastAPI room active" : "Frontend room only"}
+              <Badge variant={room.aiRoomReady ? "default" : "subtle"}>
+                {room.aiRoomReady ? "AI room ready" : "AI sync pending"}
               </Badge>
+              <Badge variant="subtle">{connected ? "Live socket connected" : "Socket reconnecting"}</Badge>
             </div>
 
             <div>
               <h2 className="font-[var(--font-display)] text-4xl font-bold uppercase tracking-[-0.08em] md:text-5xl">
                 {room.title}
               </h2>
-              <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
+              <p className="mt-3 max-w-4xl text-base leading-7 text-muted-foreground">
                 {room.description}
               </p>
             </div>
@@ -553,261 +673,291 @@ export function PrivateRoomPage({ roomId }: { roomId: string }) {
                 </span>
               ))}
             </div>
-
-            <div className="flex flex-wrap gap-2">
-              {members.map((member) =>
-                member ? (
-                  <span
-                    key={member.id}
-                    className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-white px-3 py-2 text-sm font-semibold text-foreground"
-                  >
-                    <span className={`flex h-7 w-7 items-center justify-center rounded-full text-[0.68rem] uppercase ${member.accent}`}>
-                      {member.name.slice(0, 1)}
-                    </span>
-                    {member.name}
-                  </span>
-                ) : null,
-              )}
-            </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-            <div className="rounded-[1.5rem] border border-border/70 bg-sidebar p-4 text-sidebar-foreground">
-              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/60">
+          <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-1">
+            <div className="rounded-[1.35rem] border border-border/70 bg-secondary/45 p-4">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Room code
+              </p>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <span className="font-[var(--font-display)] text-2xl font-bold tracking-[-0.05em]">
+                  {room.roomCode}
+                </span>
+                <Button type="button" variant="outline" className="h-10 px-4" onClick={handleCopyCode}>
+                  <Copy className="h-4 w-4" />
+                  Copy
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-[1.35rem] border border-border/70 bg-sidebar p-4 text-sidebar-foreground">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/56">
+                Live status
+              </p>
+              <div className="mt-3 flex items-center gap-2 text-sm">
+                {connected ? <Wifi className="h-4 w-4 text-accent" /> : <WifiOff className="h-4 w-4 text-accent" />}
+                <span className="text-sidebar-foreground/80">
+                  {connected ? "Room chat connected" : "Waiting for socket connection"}
+                </span>
+              </div>
+            </div>
+
+            <div className="rounded-[1.35rem] border border-border/70 bg-secondary/45 p-4">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 Last activity
               </p>
-              <p className="mt-3 text-sm leading-6 text-sidebar-foreground/76">
-                {room.lastActivity}
-              </p>
-            </div>
-            <div className="rounded-[1.5rem] border border-border/70 bg-secondary/45 p-4">
-              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                Next focus
-              </p>
-              <p className="mt-3 text-sm leading-6 text-foreground">{room.nextFocus}</p>
+              <p className="mt-3 text-sm leading-6 text-foreground">{room.lastActivity}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="flex flex-wrap gap-2">
-        {roomTabs.map((tab) => {
-          const Icon = tab.icon;
-          const active = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em]",
-                active
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-border/70 bg-white text-foreground hover:bg-secondary/80",
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
+      {error ? (
+        <Card className="border border-destructive/30 bg-[#fff1ed]">
+          <CardContent className="p-4 text-sm leading-6 text-destructive">{error}</CardContent>
+        </Card>
+      ) : null}
 
-      {activeTab === "discussion" ? (
-        <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-          <Card>
+      <div className="grid gap-4 xl:grid-cols-[18rem_minmax(0,1.3fr)_24rem]">
+        <div className="space-y-4">
+          <Card className="border border-border/70">
             <CardContent className="space-y-4 p-4">
-              <div className="space-y-3">
-                {room.discussion.map((entry) => {
-                  const author = getMemberById(entry.authorId);
-                  const displayName =
-                    entry.authorType === "bot"
-                      ? entry.authorLabel ?? "SYNC_BOT"
-                      : author?.name ?? entry.authorLabel ?? "Room member";
-
-                  return (
-                    <div
-                      key={entry.id}
-                      className={cn(
-                        "rounded-[1.25rem] border p-4",
-                        entry.authorType === "bot"
-                          ? "border-sidebar bg-sidebar text-sidebar-foreground"
-                          : "border-border/70 bg-secondary/45",
-                      )}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span
-                          className={cn(
-                            "font-semibold",
-                            entry.authorType === "bot"
-                              ? "text-sidebar-foreground"
-                              : "text-foreground",
-                          )}
-                        >
-                          {displayName}
-                        </span>
-                        <span
-                          className={cn(
-                            "text-xs font-semibold uppercase tracking-[0.18em]",
-                            entry.authorType === "bot"
-                              ? "text-sidebar-foreground/56"
-                              : "text-muted-foreground",
-                          )}
-                        >
-                          {entry.createdAt}
-                        </span>
-                      </div>
-                      <p
-                        className={cn(
-                          "mt-3 whitespace-pre-line text-sm leading-6",
-                          entry.authorType === "bot"
-                            ? "text-sidebar-foreground/78"
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {entry.content}
-                      </p>
-
-                      {entry.sources?.length ? (
-                        <div className="mt-4 space-y-2">
-                          {entry.sources.map((source) => (
-                            <div
-                              key={source.chunkId}
-                              className={cn(
-                                "rounded-[1rem] border px-3 py-3 text-sm",
-                                entry.authorType === "bot"
-                                  ? "border-sidebar-foreground/10 bg-white/[0.06] text-sidebar-foreground/76"
-                                  : "border-border/70 bg-white text-muted-foreground",
-                              )}
-                            >
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Badge variant={entry.authorType === "bot" ? "accent" : "subtle"}>
-                                  {source.filename}
-                                </Badge>
-                                <Badge variant="outline">Page {source.pageNumber}</Badge>
-                              </div>
-                              <p className="mt-2 leading-6">{source.excerpt}</p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-
-                {botLoading ? (
-                  <div className="rounded-[1.25rem] border border-sidebar bg-sidebar p-4 text-sidebar-foreground">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="font-semibold text-sidebar-foreground">SYNC_BOT</span>
-                      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/56">
-                        Thinking
-                      </span>
-                    </div>
-                    <p className="mt-3 text-sm leading-6 text-sidebar-foreground/78">
-                      Retrieving room-scoped knowledge and preparing a grounded reply...
-                    </p>
-                  </div>
-                ) : null}
+              <div className="space-y-2">
+                <Badge variant="accent">Room Info</Badge>
+                <h3 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[-0.05em]">
+                  Team capsule
+                </h3>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  Share this room code with trusted collaborators and keep resources room-bound.
+                </p>
               </div>
 
-              <form
-                className="space-y-3 rounded-[1.25rem] border border-border/70 bg-white p-4"
-                onSubmit={handleSendMessage}
-              >
-                <div className="space-y-2">
-                  <Badge variant="accent">Room Chat</Badge>
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    Chat normally with the group, or tag{" "}
-                    <span className="font-semibold text-foreground">@SYNC_BOT</span> to query
-                    indexed room knowledge directly in the thread.
-                  </p>
-                </div>
+              <div className="space-y-2">
+                {room.members.map((member) => (
+                  <div
+                    key={member.userId}
+                    className="flex items-center gap-3 rounded-[1rem] border border-border/70 bg-secondary/45 px-3 py-3"
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-sm font-semibold uppercase text-foreground">
+                      {member.name.slice(0, 1)}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-foreground">{member.name}</p>
+                      <p className="truncate text-sm text-muted-foreground">{member.role}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-[1rem] border border-border/70 bg-secondary/45 px-4 py-3 text-sm text-muted-foreground">
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Next focus
+                </p>
+                <p className="mt-2 text-foreground">{room.nextFocus}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-border/70">
+            <CardContent className="space-y-4 p-4">
+              <div className="space-y-2">
+                <Badge variant="accent">Invite Users</Badge>
+                <h3 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[-0.05em]">
+                  Invite by email
+                </h3>
+              </div>
+
+              <form className="space-y-3" onSubmit={handleInvite}>
                 <Textarea
-                  value={chatDraft}
-                  onChange={(event) => setChatDraft(event.target.value)}
-                  placeholder="Type a group message, or try: @SYNC_BOT what does the uploaded PDF say about deadlock prevention?"
+                  value={inviteEmails}
+                  onChange={(event) => setInviteEmails(event.target.value)}
+                  placeholder="rina@college.edu, kabir@college.edu"
                   className="min-h-[120px]"
                 />
-                <Button type="submit" variant="dark" disabled={botLoading}>
-                  {botLoading ? (
+                <Button type="submit" variant="dark" className="w-full" disabled={inviteLoading}>
+                  {inviteLoading ? (
                     <>
                       <LoaderCircle className="h-4 w-4 animate-spin" />
-                      SYNC_BOT is thinking
+                      Preparing invites
                     </>
                   ) : (
                     <>
-                      <SendHorizontal className="h-4 w-4" />
-                      Send message
+                      <UsersRound className="h-4 w-4" />
+                      Invite collaborators
                     </>
                   )}
                 </Button>
               </form>
-            </CardContent>
-          </Card>
 
-          <Card className="bg-secondary/45">
-            <CardContent className="space-y-3 p-4">
-              <Badge variant="accent">Discussion + bot</Badge>
-              <h3 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[-0.05em]">
-                Use chat as the main surface
-              </h3>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Group messages stay in the room thread. When you need grounded help,
-                call the bot directly with <span className="font-semibold text-foreground">@SYNC_BOT</span>.
-              </p>
-              <div className="rounded-[1rem] border border-border/70 bg-white px-4 py-3 text-sm leading-6 text-muted-foreground">
-                Example:
-                <p className="mt-2 font-medium text-foreground">
-                  @SYNC_BOT what are the key observations from the uploaded contest PDF?
-                </p>
-              </div>
+              {inviteFeedback ? (
+                <div className="rounded-[1rem] border border-border/70 bg-secondary/45 px-4 py-3 text-sm leading-6 text-muted-foreground">
+                  {inviteFeedback}
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         </div>
-      ) : null}
 
-      {activeTab === "resources" ? (
-        <Card>
-          <CardContent className="grid gap-3 p-4 md:grid-cols-2">
-            {room.resources.map((resource) => (
-              <div key={resource.id} className="rounded-[1.25rem] border border-border/70 bg-secondary/45 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-semibold text-foreground">{resource.name}</p>
-                  <Badge variant={resource.status === "indexed" ? "default" : "subtle"}>
-                    {resource.status}
-                  </Badge>
+        <Card className="border border-border/70">
+          <CardContent className="flex h-[calc(100vh-19rem)] min-h-[36rem] flex-col p-0">
+            <div className="border-b border-border/70 px-5 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="accent">Live Discussion</Badge>
+                    <Badge variant="subtle">{messages.length} messages</Badge>
+                  </div>
+                  <h3 className="mt-3 font-[var(--font-display)] text-3xl font-bold uppercase tracking-[-0.06em]">
+                    Chat-first room
+                  </h3>
                 </div>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  {resource.type} resource updated {resource.updatedAt}
-                </p>
+                <div className="max-w-sm rounded-[1rem] border border-border/70 bg-secondary/45 px-4 py-3 text-sm leading-6 text-muted-foreground">
+                  Tag <span className="font-semibold text-foreground">@SYNC_BOT</span> in this thread for grounded, tutor-like answers based on room uploads.
+                </div>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      ) : null}
+            </div>
 
-      {activeTab === "knowledge" ? (
-        <KnowledgePanel roomId={room.roomId} backendReady={room.backendReady} />
-      ) : null}
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+              {messages.length > 0 ? (
+                messages.map((message) => (
+                  <MessageBubble
+                    key={message.messageId}
+                    message={message}
+                    currentUserId={identity.userId}
+                  />
+                ))
+              ) : (
+                <div className="flex h-full items-center justify-center text-center">
+                  <div className="max-w-md space-y-3">
+                    <Badge variant="subtle">Start the room</Badge>
+                    <h4 className="font-[var(--font-display)] text-3xl font-bold uppercase tracking-[-0.05em]">
+                      No messages yet
+                    </h4>
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      Start the group discussion here. Once resources are uploaded, mention @SYNC_BOT directly in chat to get grounded room help.
+                    </p>
+                  </div>
+                </div>
+              )}
 
-      {activeTab === "activity" ? (
-        <Card>
-          <CardContent className="space-y-3 p-4">
-            {room.activity.map((entry) => (
-              <div key={entry.id} className="rounded-[1.25rem] border border-border/70 bg-secondary/45 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-sm font-semibold uppercase tracking-[0.16em] text-foreground">
-                    {entry.label}
+              {botTyping ? (
+                <div className="max-w-[86%] rounded-[1.35rem] border border-sidebar bg-sidebar px-4 py-3 text-sidebar-foreground">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold">SYNC_BOT</span>
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/56">
+                      Thinking
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-sidebar-foreground/76">
+                    Retrieving room materials and preparing a grounded reply...
                   </p>
-                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    {entry.createdAt}
-                  </span>
+                </div>
+              ) : null}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            <form className="border-t border-border/70 px-4 py-4" onSubmit={handleSendMessage}>
+              <div className="rounded-[1.35rem] border border-border/70 bg-secondary/20 p-3">
+                <Textarea
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  placeholder="Chat with the room, or try: @SYNC_BOT explain deadlock simply from the uploaded notes."
+                  className="min-h-[110px] border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+                />
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Human messages and bot replies are stored in room history for everyone who joins later.
+                  </p>
+                  <Button type="submit" variant="dark">
+                    <SendHorizontal className="h-4 w-4" />
+                    Send
+                  </Button>
                 </div>
               </div>
-            ))}
+            </form>
           </CardContent>
         </Card>
-      ) : null}
+
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: "knowledge", label: "Knowledge", icon: BrainCircuit },
+              { id: "resources", label: "Resources", icon: FileUp },
+              { id: "activity", label: "Activity", icon: Sparkles },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setSideTab(tab.id as SideTab)}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em]",
+                    sideTab === tab.id
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border/70 bg-white text-foreground hover:bg-secondary/80",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {sideTab === "knowledge" ? (
+            <KnowledgeSidebar
+              room={room}
+              currentUserId={identity.userId}
+              recentMessages={messages}
+            />
+          ) : null}
+
+          {sideTab === "resources" ? (
+            <Card className="border border-border/70">
+              <CardContent className="space-y-3 p-4">
+                <Badge variant="accent">Resources snapshot</Badge>
+                <h3 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[-0.05em]">
+                  Room assets stay secondary
+                </h3>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  The room works through chat first. Uploads and source tracking stay available here without overtaking the collaboration area.
+                </p>
+                <div className="rounded-[1rem] border border-border/70 bg-secondary/45 px-4 py-4 text-sm leading-6 text-muted-foreground">
+                  Use the Knowledge tab to upload PDFs and monitor indexing.
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {sideTab === "activity" ? (
+            <Card className="border border-border/70">
+              <CardContent className="space-y-3 p-4">
+                <Badge variant="accent">Activity</Badge>
+                <h3 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[-0.05em]">
+                  Room momentum
+                </h3>
+                <div className="space-y-3">
+                  <div className="rounded-[1rem] border border-border/70 bg-secondary/45 px-4 py-3">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Updated
+                    </p>
+                    <p className="mt-2 text-sm text-foreground">{formatTimestamp(room.updatedAt)}</p>
+                  </div>
+                  <div className="rounded-[1rem] border border-border/70 bg-secondary/45 px-4 py-3">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Latest
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-foreground">{room.lastActivity}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }

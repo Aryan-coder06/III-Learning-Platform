@@ -1,6 +1,7 @@
 from langgraph.graph import StateGraph, END
 from app.graph.state import RagGraphState
 from app.graph.nodes.validate_request_node import validate_request_node
+from app.graph.nodes.classify_query_intent_node import classify_query_intent_node
 from app.graph.nodes.retrieve_nodes import dense_retrieve_node, sparse_retrieve_node
 from app.graph.nodes.merge_rank_node import merge_and_rank_node
 from app.graph.nodes.generate_answer_node import generate_grounded_answer_node
@@ -11,6 +12,7 @@ def create_rag_graph():
 
     # Add Nodes
     workflow.add_node("validate", validate_request_node)
+    workflow.add_node("classify", classify_query_intent_node)
     workflow.add_node("dense_retrieve", dense_retrieve_node)
     workflow.add_node("sparse_retrieve", sparse_retrieve_node)
     workflow.add_node("merge_rank", merge_and_rank_node)
@@ -20,9 +22,9 @@ def create_rag_graph():
     # Build Edges
     workflow.set_entry_point("validate")
     
-    # After validation, run retrieval in parallel
-    workflow.add_edge("validate", "dense_retrieve")
-    workflow.add_edge("validate", "sparse_retrieve")
+    workflow.add_edge("validate", "classify")
+    workflow.add_edge("classify", "dense_retrieve")
+    workflow.add_edge("classify", "sparse_retrieve")
     
     # Join parallel retrieval nodes to merge_rank
     workflow.add_edge("dense_retrieve", "merge_rank")

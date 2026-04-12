@@ -8,8 +8,6 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
-  Rocket,
-  Sparkles,
   X,
 } from "lucide-react";
 
@@ -61,7 +59,7 @@ function SidebarContent({
                 href={item.href}
                 onClick={onNavigate}
                 className={cn(
-                  "group flex items-center gap-3 rounded-[1.2rem] px-3 py-3 text-sm font-semibold uppercase tracking-[0.16em]",
+                  "group flex items-center gap-3 rounded-[1.2rem] px-3 py-4 text-sm font-semibold uppercase tracking-[0.16em]",
                   collapsed ? "justify-center" : "justify-start",
                   active
                     ? "bg-white text-foreground shadow-[0_16px_30px_rgba(255,255,255,0.12)]"
@@ -93,53 +91,21 @@ function SidebarContent({
             collapsed && !mobile && "px-3",
           )}
         >
-          <div className={cn("flex items-start gap-3", collapsed && !mobile && "justify-center")}>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
-              <Rocket className="h-4 w-4" />
-            </div>
-            {(!collapsed || mobile) && (
-              <div className="space-y-1">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sidebar-foreground">
-                  Room RAG
-                </p>
-                <p className="text-sm leading-6 text-sidebar-foreground/60">
-                  Private room uploads, retrieval, and future agents connect from here next.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div
-          className={cn(
-            "rounded-[1.65rem] border border-sidebar-foreground/12 bg-white/[0.06] p-4",
-            collapsed && !mobile && "px-3",
-          )}
-        >
           <div className={cn("flex items-center gap-3", collapsed && !mobile && "justify-center")}>
             <div className="flex h-10 w-10 items-center justify-center rounded-full border border-sidebar-foreground/12 bg-black text-sm font-semibold uppercase text-sidebar-foreground">
-              {user?.name?.slice(0, 1) ?? "D"}
+              {user?.name?.slice(0, 1) ?? "U"}
             </div>
             {(!collapsed || mobile) && (
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold uppercase tracking-[0.16em] text-sidebar-foreground">
-                  {user?.name ?? "Demo User"}
+                  {user?.name ?? "User"}
                 </p>
                 <p className="truncate text-sm text-sidebar-foreground/58">
-                  {user?.email ?? "demo@studysync.ai"}
+                  {user?.email ?? ""}
                 </p>
               </div>
             )}
           </div>
-
-          {(!collapsed || mobile) && (
-            <div className="mt-3 rounded-[1rem] border border-sidebar-foreground/10 bg-black/25 px-3 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/58">
-              <span className="inline-flex items-center gap-2">
-                <Sparkles className="h-3.5 w-3.5 text-accent" />
-                Demo workspace mode
-              </span>
-            </div>
-          )}
         </div>
 
         <Button

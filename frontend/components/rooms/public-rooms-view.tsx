@@ -18,12 +18,14 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { useAuthStore } from "@/lib/auth/auth-store";
 import { cn } from "@/lib/utils";
 import { getSocket } from "@/lib/socket";
 import {
   publicChannels,
   channelMembers,
   type Channel,
+  type ChannelMember,
 } from "@/lib/mock/public-rooms";
 
 /* ------------------------------------------------------------------ */
@@ -376,6 +378,66 @@ function MessageArea({
 }
 
 /* ------------------------------------------------------------------ */
+/*  Member Panel Helpers                                               */
+/* ------------------------------------------------------------------ */
+
+const StatusDot = ({ status }: { status: string }) => (
+  <span
+    className={cn(
+      "h-2.5 w-2.5 rounded-full border-2 border-white",
+      status === "online"
+        ? "bg-green-400"
+        : status === "idle"
+          ? "bg-yellow-400"
+          : "bg-gray-300"
+    )}
+  />
+);
+
+const RoleIcon = ({ role }: { role: string }) =>
+  role === "admin" ? (
+    <Crown className="h-3 w-3 text-amber-500" />
+  ) : role === "moderator" ? (
+    <Shield className="h-3 w-3 text-blue-500" />
+  ) : null;
+
+const MemberGroup = ({
+  label,
+  list,
+}: {
+  label: string;
+  list: ChannelMember[];
+}) =>
+  list.length > 0 ? (
+    <div>
+      <p className="mb-2 px-3 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        {label} — {list.length}
+      </p>
+      <div className="space-y-0.5">
+        {list.map((m) => (
+          <div
+            key={m.id}
+            className="flex items-center gap-2.5 rounded-xl px-3 py-2 hover:bg-secondary/45"
+          >
+            <div className="relative">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-border/70 bg-secondary/45 text-xs font-bold uppercase text-muted-foreground">
+                {m.name[0]}
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5">
+                <StatusDot status={m.status} />
+              </div>
+            </div>
+            <span className="flex-1 truncate text-sm text-foreground">
+              {m.name}
+            </span>
+            <RoleIcon role={m.role} />
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null;
+
+/* ------------------------------------------------------------------ */
 /*  Member Panel                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -384,62 +446,6 @@ function MemberPanel({ channelId }: { channelId: string }) {
   const online = members.filter((m) => m.status === "online");
   const idle = members.filter((m) => m.status === "idle");
   const offline = members.filter((m) => m.status === "offline");
-
-  const StatusDot = ({ status }: { status: string }) => (
-    <span
-      className={cn(
-        "h-2.5 w-2.5 rounded-full border-2 border-white",
-        status === "online"
-          ? "bg-green-400"
-          : status === "idle"
-            ? "bg-yellow-400"
-            : "bg-gray-300"
-      )}
-    />
-  );
-
-  const RoleIcon = ({ role }: { role: string }) =>
-    role === "admin" ? (
-      <Crown className="h-3 w-3 text-amber-500" />
-    ) : role === "moderator" ? (
-      <Shield className="h-3 w-3 text-blue-500" />
-    ) : null;
-
-  const MemberGroup = ({
-    label,
-    list,
-  }: {
-    label: string;
-    list: typeof members;
-  }) =>
-    list.length > 0 ? (
-      <div>
-        <p className="mb-2 px-3 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          {label} — {list.length}
-        </p>
-        <div className="space-y-0.5">
-          {list.map((m) => (
-            <div
-              key={m.id}
-              className="flex items-center gap-2.5 rounded-xl px-3 py-2 hover:bg-secondary/45"
-            >
-              <div className="relative">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-border/70 bg-secondary/45 text-xs font-bold uppercase text-muted-foreground">
-                  {m.name[0]}
-                </div>
-                <div className="absolute -bottom-0.5 -right-0.5">
-                  <StatusDot status={m.status} />
-                </div>
-              </div>
-              <span className="flex-1 truncate text-sm text-foreground">
-                {m.name}
-              </span>
-              <RoleIcon role={m.role} />
-            </div>
-          ))}
-        </div>
-      </div>
-    ) : null;
 
   return (
     <div className="flex h-full flex-col border-l border-border/70 bg-white">
@@ -466,13 +472,13 @@ function MemberPanel({ channelId }: { channelId: string }) {
 /* ------------------------------------------------------------------ */
 
 export function PublicRoomsView() {
+  const user = useAuthStore((state) => state.user);
   const [activeChannelId, setActiveChannelId] = useState("os");
   const [messages, setMessages] = useState<LiveMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
 
-  // Demo user name — will come from auth store later
-  const currentUser = "Aryan S.";
+  const currentUser = user?.name || "StudySync User";
 
   const prevChannelRef = useRef<string | null>(null);
   const activeChannel = publicChannels.find((c) => c.id === activeChannelId)!;
@@ -480,10 +486,6 @@ export function PublicRoomsView() {
   // ── Socket lifecycle ────────────────────────────────────────────────
   useEffect(() => {
     const socket = getSocket();
-
-    if (!socket.connected) {
-      socket.connect();
-    }
 
     const onConnect = () => setConnected(true);
     const onDisconnect = () => setConnected(false);
@@ -507,8 +509,14 @@ export function PublicRoomsView() {
     socket.on("receive_message", onMessage);
     socket.on("message_error", onError);
 
-    // Update connected state if already connected
-    if (socket.connected) setConnected(true);
+    if (!socket.connected) {
+      socket.connect();
+    } else {
+      // Defer to avoid synchronous setState in effect
+      queueMicrotask(() => {
+        setConnected(true);
+      });
+    }
 
     return () => {
       socket.off("connect", onConnect);
@@ -522,7 +530,7 @@ export function PublicRoomsView() {
   // ── Channel switching ───────────────────────────────────────────────
   useEffect(() => {
     const socket = getSocket();
-    if (!socket.connected) return;
+    if (!connected) return;
 
     // Leave previous channel
     if (prevChannelRef.current && prevChannelRef.current !== activeChannelId) {
@@ -530,8 +538,12 @@ export function PublicRoomsView() {
     }
 
     // Join new channel
-    setLoading(true);
-    setMessages([]);
+    // Defer state updates to avoid synchronous setState warning
+    queueMicrotask(() => {
+      setLoading(true);
+      setMessages([]);
+    });
+    
     socket.emit("join_room", activeChannelId);
     prevChannelRef.current = activeChannelId;
   }, [activeChannelId, connected]);

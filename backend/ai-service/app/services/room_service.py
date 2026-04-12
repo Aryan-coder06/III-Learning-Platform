@@ -16,7 +16,7 @@ class RoomService:
       raise HTTPException(status_code=503, detail="MongoDB is unavailable.")
 
     now = datetime.now(timezone.utc)
-    room_id = f"room_{uuid4().hex[:12]}"
+    room_id = payload.room_id or f"room_{uuid4().hex[:12]}"
     room_record = {
       "room_id": room_id,
       "title": payload.title,
@@ -26,10 +26,22 @@ class RoomService:
       "created_by": payload.created_by,
       "member_ids": list(dict.fromkeys([payload.created_by, *payload.member_ids])),
       "tags": payload.tags,
-      "created_at": now,
       "updated_at": now,
     }
 
+    existing_room = mongo_service.rooms.find_one({"room_id": room_id}, {"_id": 0, "created_at": 1})
+    if existing_room:
+      mongo_service.rooms.update_one(
+        {"room_id": room_id},
+        {"$set": room_record},
+      )
+      logger.info("Updated private room %s", room_id)
+      return {
+        **room_record,
+        "created_at": existing_room["created_at"],
+      }
+
+    room_record["created_at"] = now
     mongo_service.rooms.insert_one(room_record)
     logger.info("Created private room %s", room_id)
     return room_record

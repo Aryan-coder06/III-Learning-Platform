@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -15,16 +16,17 @@ import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { listRoomsApi, RoomApiError, type ApiPrivateRoom } from "@/lib/api/private-room";
+import { identityFromUser } from "@/lib/auth/identity";
 import {
   activityFeed,
   conversationPreview,
   dashboardStats,
-  demoUser,
   recentFiles,
   reminders,
   upcomingSessions,
 } from "@/lib/mock/dashboard";
-import { useRoomStore } from "@/lib/rooms/room-store";
+import { useAuthStore } from "@/lib/auth/auth-store";
 
 function SectionHeading({
   title,
@@ -44,15 +46,71 @@ function SectionHeading({
 }
 
 export function DashboardOverview() {
-  const rooms = useRoomStore((state) => state.rooms);
+  const user = useAuthStore((state) => state.user);
+  const identity = useMemo(() => identityFromUser(user), [user]);
+  const [rooms, setRooms] = useState<ApiPrivateRoom[]>([]);
+  const [roomError, setRoomError] = useState<string | null>(null);
+
+  const loadRooms = useCallback(async () => {
+    try {
+      const nextRooms = await listRoomsApi({
+        scope: "private",
+        memberId: identity.userId,
+      });
+      setRooms(nextRooms);
+      setRoomError(null);
+    } catch (error) {
+      setRoomError(
+        error instanceof RoomApiError ? error.message : "Could not load live room data.",
+      );
+    }
+  }, [identity.userId]);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      void loadRooms();
+    });
+    const intervalId = window.setInterval(() => {
+      void loadRooms();
+    }, 15000);
+
+    return () => window.clearInterval(intervalId);
+  }, [loadRooms]);
+
   const featuredRooms = rooms.slice(0, 3);
+  const liveStats = [
+    {
+      label: "Active Rooms",
+      value: rooms.length.toString().padStart(2, "0"),
+      detail: "Live private collaboration spaces",
+    },
+    {
+      label: "AI-Ready",
+      value: rooms.filter((room) => room.aiRoomReady).length.toString().padStart(2, "0"),
+      detail: "Rooms connected to uploads and @SYNC_BOT",
+    },
+    ...dashboardStats.slice(2),
+  ];
+  const liveConversationPreview =
+    featuredRooms.length > 0
+      ? featuredRooms.map((room) => ({
+          room: room.title,
+          unread: room.aiRoomReady ? 1 : 0,
+          sender: room.members[0]?.name || room.createdByName || "Room",
+          lastMessage: room.lastActivity,
+          time: new Date(room.updatedAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        }))
+      : conversationPreview;
 
   return (
     <div className="space-y-4">
-      <DashboardHeader name={demoUser.name} />
+      <DashboardHeader name={user?.name || "User"} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        {dashboardStats.map((stat, index) => (
+        {liveStats.map((stat, index) => (
           <Card
             key={stat.label}
             className={
@@ -87,7 +145,7 @@ export function DashboardOverview() {
           <CardContent className="p-4">
             <SectionHeading
               title="Private Rooms"
-              description="Focused rooms are now the primary collaboration and retrieval surface."
+              description="Focused rooms are now the primary collaboration and retrieval surface, with live room codes and AI-ready discussion."
             />
 
             <div className="mb-4 flex flex-col gap-3 sm:flex-row">
@@ -114,9 +172,11 @@ export function DashboardOverview() {
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="accent">{room.topicLabel}</Badge>
-                      <Badge variant={room.backendReady ? "default" : "subtle"}>
-                        {room.backendReady ? "Knowledge ready" : "Demo room"}
-                      </Badge>
+                      {room.aiRoomReady && (
+                        <Badge variant="default">
+                          Knowledge ready
+                        </Badge>
+                      )}
                     </div>
 
                     <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
@@ -136,7 +196,7 @@ export function DashboardOverview() {
 
                     <div className="mt-4 grid gap-2 text-sm text-muted-foreground md:grid-cols-3">
                       <div className="rounded-[1rem] border border-border/70 bg-white px-3 py-2">
-                        {room.memberIds.length} members
+                        {room.memberCount} members
                       </div>
                       <div className="rounded-[1rem] border border-border/70 bg-white px-3 py-2">
                         {room.nextFocus}
@@ -149,8 +209,12 @@ export function DashboardOverview() {
                 ))}
               </div>
 
-              <CreatePrivateRoomPanel compact />
+              <CreatePrivateRoomPanel compact onCreated={() => void loadRooms()} />
             </div>
+
+            {roomError ? (
+              <p className="mt-4 text-sm text-destructive">{roomError}</p>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -161,7 +225,7 @@ export function DashboardOverview() {
               description="Unread room threads and collaboration signals."
             />
             <div className="space-y-3">
-              {conversationPreview.map((thread) => (
+              {liveConversationPreview.map((thread) => (
                 <div
                   key={thread.room}
                   className="rounded-[1.35rem] border border-sidebar-foreground/10 bg-sidebar-foreground/[0.05] p-4"
@@ -236,7 +300,7 @@ export function DashboardOverview() {
                   ))}
                 </div>
                 <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                  Excalidraw-style collaboration can attach here without reworking the shell.
+                  Collaborative canvas for visual learning and diagramming.
                 </p>
               </div>
             </CardContent>

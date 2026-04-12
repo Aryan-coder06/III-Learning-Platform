@@ -38,6 +38,14 @@ export function useJitsi() {
   const [error, setError] = useState<string | null>(null);
   const [inCall, setInCall] = useState(false);
 
+  const endMeeting = useCallback(() => {
+    if (apiRef.current) {
+      apiRef.current.dispose();
+      apiRef.current = null;
+    }
+    setInCall(false);
+  }, []);
+
   const startMeeting = useCallback(async (config: JitsiConfig) => {
     setLoading(true);
     setError(null);
@@ -101,15 +109,7 @@ export function useJitsi() {
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  const endMeeting = useCallback(() => {
-    if (apiRef.current) {
-      apiRef.current.dispose();
-      apiRef.current = null;
-    }
-    setInCall(false);
-  }, []);
+  }, [endMeeting]);
 
   // Cleanup on unmount
   useEffect(() => {

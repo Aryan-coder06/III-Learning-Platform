@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class CreatePrivateRoomRequest(BaseModel):
+  room_id: str | None = None
   title: str = Field(min_length=2, max_length=120)
   description: str = Field(min_length=8, max_length=600)
   created_by: str = Field(min_length=2, max_length=120)

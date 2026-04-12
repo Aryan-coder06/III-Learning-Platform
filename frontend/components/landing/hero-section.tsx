@@ -79,7 +79,7 @@ export function HeroSection() {
                   Dashboard snapshot
                 </p>
                 <span className="text-xs font-bold uppercase tracking-[0.18em] text-foreground/50">
-                  Live demo
+                  Real-time
                 </span>
               </div>
 

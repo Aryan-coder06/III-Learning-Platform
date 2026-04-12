@@ -248,7 +248,7 @@ export function SessionsMeeting() {
               <CardContent className="space-y-4">
                 <p className="text-sm leading-6 text-muted-foreground">
                   Share this link with your study partner to join the same
-                  session. They'll be connected to your room instantly.
+                  session. They&apos;ll be connected to your room instantly.
                 </p>
                 <div className="flex gap-2">
                   <div className="min-w-0 flex-1 truncate rounded-xl border border-border/70 bg-background/80 px-4 py-3 font-mono text-xs text-muted-foreground">

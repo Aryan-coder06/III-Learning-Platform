@@ -4,10 +4,10 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, LoaderCircle, Plus } from "lucide-react";
 
-import { createPrivateRoomApi, RoomApiError } from "@/lib/api/private-room";
+import { createPrivateRoomApi, RoomApiError, type ApiPrivateRoom } from "@/lib/api/private-room";
 import { useAuthStore } from "@/lib/auth/auth-store";
+import { identityFromUser } from "@/lib/auth/identity";
 import { memberDirectory } from "@/lib/mock/rooms";
-import { useRoomStore } from "@/lib/rooms/room-store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,31 +17,24 @@ import { cn } from "@/lib/utils";
 
 type CreatePrivateRoomPanelProps = {
   compact?: boolean;
+  onCreated?: (room: ApiPrivateRoom) => void;
 };
 
 export function CreatePrivateRoomPanel({
   compact = false,
+  onCreated,
 }: CreatePrivateRoomPanelProps) {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const createRoom = useRoomStore((state) => state.createRoom);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tagsInput, setTagsInput] = useState("");
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([
-    user?.name ? "user-aryan" : memberDirectory[0]?.id ?? "user-aryan",
-  ]);
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  const currentUserId = useMemo(() => {
-    const matchedMember = memberDirectory.find(
-      (member) => member.name.toLowerCase() === user?.name?.toLowerCase(),
-    );
-    return matchedMember?.id ?? "user-aryan";
-  }, [user?.name]);
-
+  const currentIdentity = useMemo(() => identityFromUser(user), [user]);
   const tags = useMemo(
     () =>
       tagsInput
@@ -67,48 +60,42 @@ export function CreatePrivateRoomPanel({
       return;
     }
 
-    const memberIds = Array.from(new Set([currentUserId, ...selectedMembers]));
     setSubmitting(true);
     setFeedback(null);
 
-    let backendReady = false;
-    let roomId: string | undefined;
-
     try {
-      const room = await createPrivateRoomApi({
+      const selectedCollaborators = memberDirectory
+        .filter((member) => selectedMembers.includes(member.id))
+        .map((member) => ({
+          userId: member.id,
+          name: member.name,
+          email: member.email,
+        }));
+
+      const createdRoom = await createPrivateRoomApi({
         title: title.trim(),
         description: description.trim(),
-        created_by: currentUserId,
-        member_ids: memberIds,
         tags,
+        owner: currentIdentity,
+        members: selectedCollaborators,
       });
-      roomId = room.room_id;
-      backendReady = true;
-      setFeedback("Private room created and synced with the FastAPI room service.");
+
+      setFeedback(`Room created. Share ${createdRoom.roomCode} with your collaborators.`);
+      setTitle("");
+      setDescription("");
+      setTagsInput("");
+      setSelectedMembers([]);
+      onCreated?.(createdRoom);
+      router.push(`/rooms/${createdRoom.roomId}`);
     } catch (error) {
-      const detail =
+      setFeedback(
         error instanceof RoomApiError
           ? error.message
-          : "Backend room service is unavailable. Saved locally instead.";
-      setFeedback(detail);
+          : "Room creation failed. Check the backend services and try again.",
+      );
+    } finally {
+      setSubmitting(false);
     }
-
-    const createdRoom = createRoom({
-      roomId,
-      title: title.trim(),
-      description: description.trim(),
-      createdBy: currentUserId,
-      memberIds,
-      tags,
-      backendReady,
-    });
-
-    setSubmitting(false);
-    setTitle("");
-    setDescription("");
-    setTagsInput("");
-    setSelectedMembers([currentUserId]);
-    router.push(`/rooms/${createdRoom.roomId}`);
   }
 
   return (
@@ -118,11 +105,11 @@ export function CreatePrivateRoomPanel({
           <Badge variant="accent">Create Private Room</Badge>
           <div>
             <h3 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[-0.06em]">
-              Focused room setup
+              Spin up a live study room
             </h3>
             <p className="text-sm leading-6 text-muted-foreground">
-              Create a private room for study discussion, room-specific uploads,
-              and grounded knowledge retrieval.
+              Generate a room code, invite collaborators, and unlock room-scoped chat
+              plus grounded AI help.
             </p>
           </div>
         </div>
@@ -164,35 +151,37 @@ export function CreatePrivateRoomPanel({
 
           <div className="space-y-3">
             <label className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              Invite members
+              Preselect collaborators
             </label>
             <div className="flex flex-wrap gap-2">
-              {memberDirectory.map((member) => {
-                const active = selectedMembers.includes(member.id);
-                return (
-                  <button
-                    key={member.id}
-                    type="button"
-                    className={cn(
-                      "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold",
-                      active
-                        ? "border-accent bg-accent text-accent-foreground"
-                        : "border-border/70 bg-secondary/45 text-foreground hover:bg-secondary",
-                    )}
-                    onClick={() => toggleMember(member.id)}
-                  >
-                    <span
+              {memberDirectory
+                .filter((member) => member.email !== currentIdentity.email)
+                .map((member) => {
+                  const active = selectedMembers.includes(member.id);
+                  return (
+                    <button
+                      key={member.id}
+                      type="button"
                       className={cn(
-                        "flex h-7 w-7 items-center justify-center rounded-full text-[0.68rem] uppercase",
-                        active ? "bg-white/15" : member.accent,
+                        "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold",
+                        active
+                          ? "border-accent bg-accent text-accent-foreground"
+                          : "border-border/70 bg-secondary/45 text-foreground hover:bg-secondary",
                       )}
+                      onClick={() => toggleMember(member.id)}
                     >
-                      {member.name.slice(0, 1)}
-                    </span>
-                    {member.name}
-                  </button>
-                );
-              })}
+                      <span
+                        className={cn(
+                          "flex h-7 w-7 items-center justify-center rounded-full text-[0.68rem] uppercase",
+                          active ? "bg-white/15" : member.accent,
+                        )}
+                      >
+                        {member.name.slice(0, 1)}
+                      </span>
+                      {member.name}
+                    </button>
+                  );
+                })}
             </div>
           </div>
 
@@ -207,7 +196,7 @@ export function CreatePrivateRoomPanel({
               {submitting ? (
                 <>
                   <LoaderCircle className="h-4 w-4 animate-spin" />
-                  Provisioning room
+                  Creating room
                 </>
               ) : (
                 <>
@@ -216,7 +205,12 @@ export function CreatePrivateRoomPanel({
                 </>
               )}
             </Button>
-            <Button type="button" variant="outline" className="sm:flex-1" onClick={() => router.push("/rooms")}>
+            <Button
+              type="button"
+              variant="outline"
+              className="sm:flex-1"
+              onClick={() => router.push("/rooms")}
+            >
               <ArrowUpRight className="h-4 w-4" />
               View Rooms
             </Button>

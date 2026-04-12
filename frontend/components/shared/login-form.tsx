@@ -4,11 +4,14 @@ import { startTransition, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
+import { signInWithPopup } from "firebase/auth";
+import { ArrowRight } from "lucide-react";
 
+import { auth, googleProvider } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { demoUser } from "@/lib/mock/dashboard";
+import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/lib/auth/auth-store";
 
 const loginSchema = z.object({
@@ -25,23 +28,40 @@ export function LoginForm({ nextPath }: LoginFormProps) {
   const signIn = useAuthStore((state) => state.signIn);
 
   const [values, setValues] = useState({
-    email: demoUser.email,
-    password: "studysync",
+    email: "",
+    password: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
-  const proceed = (email: string) => {
-    const name = email.split("@")[0].replace(/[._-]/g, " ");
+  const proceed = (email: string, name?: string) => {
+    const defaultName = email.split("@")[0].replace(/[._-]/g, " ");
     signIn({
       email,
       name:
-        name.length > 1
-          ? name.replace(/\b\w/g, (character) => character.toUpperCase())
-          : demoUser.name,
-      role: demoUser.role,
+        name ??
+        (defaultName.length > 1
+          ? defaultName.replace(/\b\w/g, (character) => character.toUpperCase())
+          : "User"),
+      role: "Student",
     });
     startTransition(() => router.push(nextPath));
+  };
+
+  const handleGoogleSignIn = async () => {
+    setBusy(true);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      if (user.email) {
+        proceed(user.email, user.displayName ?? undefined);
+      }
+    } catch (error) {
+      console.error("Google Sign-in Error:", error);
+      setErrors({ google: error instanceof Error ? error.message : "An unknown error occurred" });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -70,12 +90,38 @@ export function LoginForm({ nextPath }: LoginFormProps) {
         <p className="section-kicker">Sign in</p>
         <CardTitle>Continue into your StudySync workspace</CardTitle>
         <CardDescription className="max-w-md text-base">
-          Stage 1 uses mocked auth. The form validates on the frontend and
-          redirects to the protected dashboard.
+          Sign in with Google for instant access or enter your credentials below.
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
+        <div className="space-y-4">
+          <Button
+            type="button"
+            variant="dark"
+            size="lg"
+            className="w-full gap-3"
+            onClick={handleGoogleSignIn}
+            disabled={busy}
+          >
+            <ArrowRight className="h-5 w-5" />
+            Sign in with Google
+          </Button>
+          
+          {errors.google ? (
+            <p className="text-center text-sm text-destructive">{errors.google}</p>
+          ) : null}
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <Separator />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+            </div>
+          </div>
+        </div>
+
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <label className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -112,23 +158,14 @@ export function LoginForm({ nextPath }: LoginFormProps) {
           </div>
 
           <div className="flex flex-col gap-3 pt-2">
-            <Button type="submit" variant="dark" size="lg" disabled={busy}>
-              {busy ? "Signing In..." : "Sign In"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={() => proceed(demoUser.email)}
-            >
-              Continue as Demo User
+            <Button type="submit" variant="outline" size="lg" disabled={busy}>
+              {busy ? "Signing In..." : "Sign In with Email"}
             </Button>
           </div>
         </form>
 
         <div className="rounded-[1.5rem] border border-border/70 bg-secondary/55 p-5 text-sm leading-7 text-muted-foreground">
-          New here? Signup and team onboarding flows come in Stage 2 alongside the
-          real backend API.
+          New here? Google Sign-in automatically creates your account.
           <div className="mt-2">
             <Link href="/" className="font-semibold text-foreground underline-offset-4 hover:underline">
               Back to landing page

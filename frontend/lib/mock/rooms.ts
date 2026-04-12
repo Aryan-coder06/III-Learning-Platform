@@ -1,6 +1,7 @@
 export type RoomMember = {
   id: string;
   name: string;
+  email: string;
   role: string;
   accent: string;
 };
@@ -55,11 +56,11 @@ export type PrivateRoom = {
 };
 
 export const memberDirectory: RoomMember[] = [
-  { id: "user-aryan", name: "Aryan", role: "You", accent: "bg-accent text-accent-foreground" },
-  { id: "user-rina", name: "Rina", role: "Systems notes", accent: "bg-sidebar text-sidebar-foreground" },
-  { id: "user-nisha", name: "Nisha", role: "Problem solving", accent: "bg-secondary text-foreground" },
-  { id: "user-kabir", name: "Kabir", role: "Project execution", accent: "bg-[#ffe9e2] text-accent" },
-  { id: "user-zara", name: "Zara", role: "Revision partner", accent: "bg-[#ece8df] text-foreground" },
+  { id: "user-aryan", name: "Aryan", email: "aryan@studysync.ai", role: "You", accent: "bg-accent text-accent-foreground" },
+  { id: "user-rina", name: "Rina", email: "rina@studysync.ai", role: "Systems notes", accent: "bg-sidebar text-sidebar-foreground" },
+  { id: "user-nisha", name: "Nisha", email: "nisha@studysync.ai", role: "Problem solving", accent: "bg-secondary text-foreground" },
+  { id: "user-kabir", name: "Kabir", email: "kabir@studysync.ai", role: "Project execution", accent: "bg-[#ffe9e2] text-accent" },
+  { id: "user-zara", name: "Zara", email: "zara@studysync.ai", role: "Revision partner", accent: "bg-[#ece8df] text-foreground" },
 ];
 
 export const seededPrivateRooms: PrivateRoom[] = [

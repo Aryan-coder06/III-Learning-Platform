@@ -28,8 +28,9 @@ export default async function LoginPage({
               Sign in to the collaborative control center.
             </h1>
             <p className="max-w-2xl text-xl leading-9 text-muted-foreground">
-              This Stage 1 auth screen keeps the product narrative intact while
-              routing into a protected study dashboard with mock state.
+              StudySync now uses Firebase Authentication for secure, room-scoped 
+              collaboration. Sign in with your Google account to start creating 
+              private study rooms.
             </p>
           </div>
 

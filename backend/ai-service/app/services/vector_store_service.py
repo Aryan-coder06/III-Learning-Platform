@@ -18,8 +18,14 @@ logger = get_logger(__name__)
 class VectorStoreService:
     def __init__(self):
         self.settings = get_settings()
+        
+        # LangChain's Google embeddings expect 'models/model-name' format
+        model_name = self.settings.embedding_model
+        if not model_name.startswith("models/"):
+            model_name = f"models/{model_name}"
+            
         self.embeddings = GoogleGenerativeAIEmbeddings(
-            model=self.settings.embedding_model,
+            model=model_name,
             google_api_key=self.settings.google_api_key
         )
         # Directory for room vectors

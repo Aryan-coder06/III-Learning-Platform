@@ -4,7 +4,6 @@ from app.schemas.document import DocumentRecord
 from app.schemas.rag import RagQueryRequest, RagQueryResponse
 from app.schemas.room import CreatePrivateRoomRequest, RoomRecord
 from app.services.document_service import document_service
-from app.services.indexing_service import indexing_service
 from app.graph.rag_graph import rag_graph
 from app.services.room_service import room_service
 
@@ -13,6 +12,11 @@ router = APIRouter(prefix="/api/rooms", tags=["rooms"])
 
 @router.post("/private", response_model=RoomRecord)
 def create_private_room(payload: CreatePrivateRoomRequest):
+  return room_service.create_private_room(payload)
+
+
+@router.post("/private/sync", response_model=RoomRecord)
+def sync_private_room(payload: CreatePrivateRoomRequest):
   return room_service.create_private_room(payload)
 
 
@@ -42,23 +46,13 @@ def upload_room_document(
 
 @router.post("/{room_id}/documents/{document_id}/process", response_model=DocumentRecord)
 def process_room_document(room_id: str, document_id: str, background_tasks: BackgroundTasks):
-  # Get document info
-  doc = document_service._get_document(room_id, document_id)
-  
-  # Run indexing in background
-  background_tasks.add_task(
-      indexing_service.process_document,
-      room_id=room_id,
-      document_id=document_id,
-      file_path=doc["file_path"],
-      filename=doc["filename"]
-  )
-  
-  # Return document with processing status
+  document = document_service._get_document(room_id, document_id)
+  background_tasks.add_task(document_service.process_document, room_id, document_id)
+
   return {
-      **doc,
-      "processing_status": "processing",
-      "index_status": "processing"
+    **document,
+    "processing_status": "processing",
+    "index_status": "processing",
   }
 
 
@@ -69,13 +63,21 @@ def list_room_documents(room_id: str):
 
 @router.post("/{room_id}/rag/query", response_model=RagQueryResponse)
 def query_room_knowledge(room_id: str, payload: RagQueryRequest):
-  # Invoke LangGraph
   initial_state = {
       "room_id": room_id,
       "query": payload.query,
       "top_k": payload.top_k,
+      "requested_by": payload.requested_by,
+      "recent_messages": payload.recent_messages,
       "dense_results": [],
       "sparse_results": [],
+      "merged_results": [],
+      "context_documents": [],
+      "formatted_context": "",
+      "answer": "",
+      "sources": [],
+      "query_intent": "",
+      "retrieval_run_id": "",
       "errors": []
   }
   
@@ -90,5 +92,6 @@ def query_room_knowledge(room_id: str, payload: RagQueryRequest):
     query=payload.query,
     results=final_state.get("sources", []),
     answer=final_state.get("answer", ""),
+    intent=final_state.get("query_intent", ""),
     retrieval_run_id=final_state.get("retrieval_run_id", "")
   )

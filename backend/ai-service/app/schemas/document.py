@@ -1,19 +1,23 @@
 from datetime import datetime
-
 from pydantic import BaseModel
 
-
 class DocumentRecord(BaseModel):
-  document_id: str
-  room_id: str
-  workspace_id: str
-  filename: str
-  file_path: str
-  mime_type: str
-  uploaded_by: str
-  upload_time: datetime
-  processing_status: str
-  index_status: str
-  page_count: int
-  chunk_count: int
-  version: int
+    document_id: str
+    room_id: str
+    workspace_id: str
+    filename: str
+    file_path: str
+    mime_type: str
+    uploaded_by: str
+    upload_time: datetime
+    processing_status: str
+    index_status: str
+    page_count: int = 0
+    chunk_count: int = 0
+    version: int = 1
+
+class ProcessDocumentRequest(BaseModel):
+    room_id: str
+    document_id: str
+    file_path: str # This can now be a Cloudinary URL
+    filename: str

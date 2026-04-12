@@ -29,14 +29,18 @@ class Settings(BaseSettings):
     validation_alias="AI_SERVICE_STORAGE_ROOT",
   )
   embedding_model: str = Field(
-    default="models/text-embedding-004",
+    default="models/gemini-embedding-001",
     validation_alias="EMBEDDING_MODEL",
+  )
+  generation_model: str = Field(
+    default="gemini-2.5-flash",
+    validation_alias="GENERATION_MODEL",
   )
   google_api_key: str | None = Field(
     default=None,
     validation_alias="GOOGLE_API_KEY",
   )
-  dense_vector_size: int = 768
+  dense_vector_size: int = 3072
   dense_top_k: int = 12
   sparse_top_k: int = 12
   dense_weight: float = 0.65

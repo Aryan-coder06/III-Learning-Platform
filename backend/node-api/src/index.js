@@ -4,12 +4,14 @@ const cors = require("cors");
 const { env } = require("./config/env");
 const connectDB = require("./config/db");
 const setupSockets = require("./sockets");
+const { ensurePublicRooms } = require("./services/room.service");
 
 // Route imports
 const userRoutes = require("./routes/userRoutes");
 const roomRoutes = require("./routes/roomRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const contentRoutes = require("./routes/contentRoutes");
+const documentRoutes = require("./routes/documentRoutes");
 
 const app = express();
 const server = http.createServer(app);
@@ -24,9 +26,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Connect to MongoDB
-connectDB();
-
 // Initialize Socket.io
 setupSockets(server, corsOptions);
 
@@ -35,13 +34,27 @@ app.use("/api/users", userRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/content", contentRoutes);
+app.use("/api/documents", documentRoutes);
 
 // Health check
 app.get("/", (req, res) => {
     res.send({ status: "ok", message: "StudySync Node API is running." });
 });
 
-// Start Server
-server.listen(env.port, () => {
-    console.log(`StudySync Node API running on port ${env.port}.`);
+app.get("/health", (req, res) => {
+    res.json({ status: "ok", service: "studysync-node-api" });
+});
+
+async function startServer() {
+    await connectDB();
+    await ensurePublicRooms();
+
+    server.listen(env.port, () => {
+        console.log(`StudySync Node API running on port ${env.port}.`);
+    });
+}
+
+startServer().catch((error) => {
+    console.error("Failed to start StudySync Node API:", error);
+    process.exit(1);
 });
