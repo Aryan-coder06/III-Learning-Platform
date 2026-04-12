@@ -1,13 +1,16 @@
 require("dotenv").config();
 
+function normalizeUrl(value) {
+  return `${value || ""}`.trim().replace(/\/+$/, "");
+}
+
 function parseAllowedOrigins() {
-  const normalize = (origin) => `${origin}`.trim().replace(/\/+$/, "");
   const explicit = `${process.env.FRONTEND_URLS || ""}`
     .split(",")
-    .map((origin) => normalize(origin))
+    .map((origin) => normalizeUrl(origin))
     .filter(Boolean);
 
-  const primary = normalize(process.env.FRONTEND_URL || "");
+  const primary = normalizeUrl(process.env.FRONTEND_URL || "");
   const merged = [primary, ...explicit].filter(Boolean);
   return [...new Set(merged)];
 }
@@ -24,5 +27,5 @@ exports.env = {
     apiKey: process.env.CLOUDINARY_API_KEY,
     apiSecret: process.env.CLOUDINARY_API_SECRET,
   },
-  aiServiceUrl: process.env.AI_SERVICE_URL || "",
+  aiServiceUrl: normalizeUrl(process.env.AI_SERVICE_URL || ""),
 };
