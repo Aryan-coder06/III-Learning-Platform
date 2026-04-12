@@ -1,6 +1,7 @@
 import {
   BellRing,
   FileStack,
+  Globe,
   LayoutDashboard,
   MessageSquareText,
   MonitorPlay,
@@ -19,6 +20,11 @@ export const workspaceNavItems = [
     label: "Private Rooms",
     href: "/rooms",
     icon: UsersRound,
+  },
+  {
+    label: "Public Rooms",
+    href: "/public-rooms",
+    icon: Globe,
   },
   {
     label: "Messages",
