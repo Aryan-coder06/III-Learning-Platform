@@ -1,16 +1,22 @@
-import { PagePlaceholder } from "@/components/shared/page-placeholder";
+import { Suspense } from "react";
+import { SessionsMeeting } from "@/components/sessions/sessions-meeting";
 import { WorkspaceShell } from "@/components/shared/workspace-shell";
 
 export default function SessionsPage() {
   return (
     <WorkspaceShell
       title="Sessions"
-      description="Scheduled study calls, agenda blocks, and video conferencing controls will be mounted here."
+      description="Start a video study session with your partner. Create or join a room and collaborate in real time."
     >
-      <PagePlaceholder
-        title="Sessions module"
-        description="LiveKit or WebRTC-backed calls, room scheduling, attendance tracking, and session notes are staged for future integration."
-      />
+      <Suspense
+        fallback={
+          <div className="flex h-48 items-center justify-center text-muted-foreground">
+            Loading sessions…
+          </div>
+        }
+      >
+        <SessionsMeeting />
+      </Suspense>
     </WorkspaceShell>
   );
 }
