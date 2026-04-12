@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 import { landingSections } from "@/lib/constants/site";
 
@@ -7,10 +8,14 @@ export function LandingHeader() {
     <header className="sticky top-0 z-50 border-b-[4px] border-foreground bg-background">
       <div className="section-shell flex h-24 items-center justify-between gap-6">
         <Link href="/" className="flex items-center gap-4">
-          <div className="h-9 w-9 bg-accent" />
-          <div className="font-[var(--font-display)] text-3xl font-bold uppercase tracking-[-0.08em]">
-            StudySync 
-          </div>
+          <Image
+            src="/Perfect_now_take_202604130037.png"
+            alt="StudySync"
+            width={420}
+            height={90}
+            priority
+            className="h-11 w-auto object-contain"
+          />
         </Link>
 
         <nav className="hidden gap-12 font-bold text-sm uppercase tracking-[0.22em] md:flex">
