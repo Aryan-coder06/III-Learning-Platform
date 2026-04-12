@@ -14,6 +14,7 @@ const messageSourceSchema = new mongoose.Schema(
 const messageSchema = new mongoose.Schema(
   {
     messageId: { type: String, required: true, unique: true, index: true },
+    message_id: { type: String, required: true, unique: true, index: true },
     roomId: { type: String, required: true, index: true },
     scope: {
       type: String,

@@ -36,8 +36,10 @@ async function createMessage({
   sources = [],
   metadata = {},
 }) {
+  const messageId = `msg_${uuidv4().replace(/-/g, "").slice(0, 12)}`;
   const message = await Message.create({
-    messageId: `msg_${uuidv4().replace(/-/g, "").slice(0, 12)}`,
+    messageId,
+    message_id: messageId,
     roomId,
     scope,
     senderId,
