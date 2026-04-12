@@ -7,15 +7,18 @@ export function LandingHeader() {
   return (
     <header className="sticky top-0 z-50 border-b-[4px] border-foreground bg-background">
       <div className="section-shell flex h-24 items-center justify-between gap-6">
-        <Link href="/" className="flex items-center gap-4">
+        <Link href="/" className="flex items-center gap-5">
           <Image
             src="/Perfect_now_take_202604130037.png"
             alt="StudySync"
             width={420}
             height={90}
             priority
-            className="h-11 w-auto object-contain"
+            className="h-14 w-auto object-contain"
           />
+          <div className="font-[var(--font-display)] text-4xl font-bold uppercase tracking-[-0.08em] text-foreground">
+            StudySync
+          </div>
         </Link>
 
         <nav className="hidden gap-12 font-bold text-sm uppercase tracking-[0.22em] md:flex">
