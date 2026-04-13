@@ -121,6 +121,18 @@ function normalizeBase(url: string) {
   return url.replace(/\/+$/, "").replace(/\/api$/, "");
 }
 
+function isHtmlLike(value: string) {
+  const normalized = `${value || ""}`.trim().toLowerCase();
+  return normalized.startsWith("<!doctype") || normalized.startsWith("<html");
+}
+
+function friendlyRoomError(status: number, fallback = "Request failed") {
+  if (status === 502 || status === 503 || status === 504) {
+    return "The room AI service is waking up or temporarily unavailable. Retry in a few seconds.";
+  }
+  return fallback;
+}
+
 function resolveNodeApiUrl() {
   const envUrl = process.env.NEXT_PUBLIC_NODE_API_URL;
   if (envUrl) {
@@ -137,11 +149,14 @@ async function parseResponse<T>(response: Response): Promise<T> {
   let detail = "Request failed";
   try {
     const data = (await response.json()) as { detail?: string; error?: string };
-    if (data.detail || data.error) {
-      detail = data.detail || data.error || detail;
+    const candidate = data.detail || data.error || detail;
+    if (candidate) {
+      detail = isHtmlLike(candidate)
+        ? friendlyRoomError(response.status, response.statusText || detail)
+        : candidate;
     }
   } catch {
-    detail = response.statusText || detail;
+    detail = friendlyRoomError(response.status, response.statusText || detail);
   }
 
   throw new RoomApiError(detail, response.status);
