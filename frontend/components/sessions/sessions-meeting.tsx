@@ -430,8 +430,8 @@ export function SessionsMeeting() {
                   <div className="flex items-start gap-3 rounded-[1.25rem] border border-border/70 bg-background/80 p-4">
                     <MonitorPlay className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                     <p className="text-sm leading-6 text-muted-foreground">
-                      Powered by <strong>Jitsi Meet</strong> — encrypted,
-                      open-source video conferencing with no account required.
+                      Powered by <strong>8x8 JaaS</strong> — production-ready,
+                      embedded video sessions with room-scoped access and live collaboration.
                     </p>
                   </div>
                 </div>
