@@ -60,3 +60,11 @@ export async function uploadUserFileApi(userId: string, file: File) {
 
   return parseResponse<{ user: any; file: any }>(response);
 }
+
+export async function getUserApi(userId: string) {
+  const response = await fetch(`${resolveNodeApiUrl()}/api/users/${userId}`, {
+    method: "GET",
+  });
+
+  return parseResponse<any>(response);
+}
