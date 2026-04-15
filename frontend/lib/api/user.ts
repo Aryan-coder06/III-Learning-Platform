@@ -1,4 +1,28 @@
-import type { MockUser } from "@/lib/auth/mock-auth";
+export interface UserFile {
+  name?: string;
+  filename?: string;
+  url?: string;
+  file_path?: string;
+  uploadedAt?: string;
+  upload_time?: string;
+  date?: string;
+  format?: string;
+  mime_type?: string;
+  bytes?: number;
+  size?: number;
+}
+
+export interface UserResponse {
+  _id: string;
+  userId: string;
+  email: string;
+  name: string;
+  avatarUrl?: string;
+  role: string;
+  files: UserFile[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 function normalizeBase(url: string) {
   return url.replace(/\/+$/, "").replace(/\/api$/, "");
@@ -46,7 +70,7 @@ export async function syncUserApi(payload: {
     body: JSON.stringify(payload),
   });
 
-  return parseResponse<any>(response);
+  return parseResponse<UserResponse>(response);
 }
 
 export async function uploadUserFileApi(userId: string, file: File) {
@@ -58,7 +82,7 @@ export async function uploadUserFileApi(userId: string, file: File) {
     body: formData,
   });
 
-  return parseResponse<{ user: any; file: any }>(response);
+  return parseResponse<{ user: UserResponse; file: UserFile }>(response);
 }
 
 export async function getUserApi(userId: string) {
@@ -66,5 +90,5 @@ export async function getUserApi(userId: string) {
     method: "GET",
   });
 
-  return parseResponse<any>(response);
+  return parseResponse<UserResponse>(response);
 }

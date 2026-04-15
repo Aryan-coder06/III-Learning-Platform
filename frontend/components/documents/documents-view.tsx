@@ -7,17 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FileUp, LoaderCircle, FileText, Download, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { uploadUserFileApi, getUserApi } from "@/lib/api/user";
+import { uploadUserFileApi, getUserApi, type UserFile } from "@/lib/api/user";
 import { useAuthStore } from "@/lib/auth/auth-store";
-
-interface UserFile {
-  name: string;
-  url: string;
-  uploadedAt: string;
-  format?: string;
-  bytes?: number;
-  [key: string]: any;
-}
 
 interface DocumentsViewProps {
   className?: string;
@@ -79,7 +70,8 @@ export function DocumentsView({ className }: DocumentsViewProps) {
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "N/A";
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString("en-US", {
@@ -87,7 +79,7 @@ export function DocumentsView({ className }: DocumentsViewProps) {
         day: "numeric",
         year: "numeric",
       });
-    } catch (e) {
+    } catch {
       return dateString;
     }
   };

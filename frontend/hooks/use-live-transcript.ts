@@ -8,14 +8,35 @@ type TranscriptChunk = {
   endedAtMs: number | null;
 };
 
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  [index: number]: {
+    transcript: string;
+  };
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionEvent {
+  resultIndex: number;
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent {
+  error: string;
+}
+
 type SpeechRecognitionLike = {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
   start: () => void;
   stop: () => void;
-  onresult: ((event: any) => void) | null;
-  onerror: ((event: any) => void) | null;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
   onend: (() => void) | null;
 };
 
@@ -28,15 +49,12 @@ declare global {
 
 export function useLiveTranscript(onChunk?: (chunk: TranscriptChunk) => void) {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-  const [supported, setSupported] = useState(false);
+  const [supported] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
+  });
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const RecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
-    setSupported(Boolean(RecognitionCtor));
-  }, []);
 
   const stop = useCallback(() => {
     recognitionRef.current?.stop();
@@ -57,7 +75,7 @@ export function useLiveTranscript(onChunk?: (chunk: TranscriptChunk) => void) {
     recognition.interimResults = false;
     recognition.lang = "en-IN";
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       const now = Date.now();
       for (let i = event.resultIndex; i < event.results.length; i += 1) {
         const result = event.results[i];
@@ -72,7 +90,7 @@ export function useLiveTranscript(onChunk?: (chunk: TranscriptChunk) => void) {
       }
     };
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       const msg = event?.error ? `Speech error: ${event.error}` : "Speech recognition error.";
       setError(msg);
       setRunning(false);
@@ -101,4 +119,3 @@ export function useLiveTranscript(onChunk?: (chunk: TranscriptChunk) => void) {
     stop,
   };
 }
-

@@ -8,10 +8,9 @@ import { cn } from "@/lib/utils";
 
 interface MessagingPreviewProps {
   className?: string;
-  isSidebar?: boolean;
 }
 
-export function MessagingPreview({ className, isSidebar = false }: MessagingPreviewProps) {
+export function MessagingPreview({ className }: MessagingPreviewProps) {
   return (
     <Card className={cn(
       "border-none bg-sidebar text-sidebar-foreground shadow-[0_20px_34px_rgba(19,19,19,0.16)]",

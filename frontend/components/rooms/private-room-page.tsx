@@ -32,7 +32,7 @@ import {
   type ApiRoomMessage,
   uploadRoomDocumentApi,
 } from "@/lib/api/private-room";
-import { getUserApi } from "@/lib/api/user";
+import { getUserApi, type UserFile } from "@/lib/api/user";
 import { useAuthStore } from "@/lib/auth/auth-store";
 import { identityFromUser } from "@/lib/auth/identity";
 import { getSocket } from "@/lib/socket";
@@ -110,7 +110,7 @@ function KnowledgeSidebar({
   const [querying, setQuerying] = useState(false);
 
   // Personal Vault states
-  const [personalDocs, setPersonalDocs] = useState<any[]>([]);
+  const [personalDocs, setPersonalDocs] = useState<UserFile[]>([]);
   const [showPersonalVault, setShowPersonalVault] = useState(false);
   const [vaultLoading, setVaultLoading] = useState(false);
 
@@ -183,10 +183,13 @@ function KnowledgeSidebar({
     }
   }
 
-  async function handleImportFromVault(doc: any) {
+  async function handleImportFromVault(doc: UserFile) {
     setUploading(true);
     setDocumentsError(null);
     try {
+      if (!doc.url) {
+        throw new Error("Document URL is missing.");
+      }
       // Fetch the file from Cloudinary URL
       const response = await fetch(doc.url);
       const blob = await response.blob();
