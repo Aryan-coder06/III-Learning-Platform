@@ -6,7 +6,9 @@ import {
   ArrowRight,
   BrainCircuit,
   Copy,
+  FileText,
   FileUp,
+  Library,
   LoaderCircle,
   RefreshCw,
   SendHorizontal,
@@ -30,6 +32,7 @@ import {
   type ApiRoomMessage,
   uploadRoomDocumentApi,
 } from "@/lib/api/private-room";
+import { getUserApi } from "@/lib/api/user";
 import { useAuthStore } from "@/lib/auth/auth-store";
 import { identityFromUser } from "@/lib/auth/identity";
 import { getSocket } from "@/lib/socket";
@@ -82,6 +85,7 @@ function KnowledgeSidebar({
   currentUserId: string;
   recentMessages: ApiRoomMessage[];
 }) {
+  const user = useAuthStore((state) => state.user);
   const actor = useMemo(
     () => ({
       userId: currentUserId,
@@ -105,6 +109,11 @@ function KnowledgeSidebar({
   const [ragResponse, setRagResponse] = useState<ApiRagResponse | null>(null);
   const [querying, setQuerying] = useState(false);
 
+  // Personal Vault states
+  const [personalDocs, setPersonalDocs] = useState<any[]>([]);
+  const [showPersonalVault, setShowPersonalVault] = useState(false);
+  const [vaultLoading, setVaultLoading] = useState(false);
+
   const refreshDocuments = useCallback(async () => {
     setDocumentsLoading(true);
     setDocumentsError(null);
@@ -121,11 +130,33 @@ function KnowledgeSidebar({
     }
   }, [currentUserId, room.roomId]);
 
+  const fetchPersonalDocs = useCallback(async () => {
+    if (!user?.mongoId) {
+      console.warn("No mongoId available for personal vault fetch");
+      return;
+    }
+    setVaultLoading(true);
+    try {
+      const userData = await getUserApi(user.mongoId);
+      setPersonalDocs(userData?.files || []);
+    } catch (err) {
+      console.error("Failed to fetch personal documents:", err);
+    } finally {
+      setVaultLoading(false);
+    }
+  }, [user?.mongoId]);
+
   useEffect(() => {
     queueMicrotask(() => {
       void refreshDocuments();
     });
   }, [refreshDocuments]);
+
+  useEffect(() => {
+    if (showPersonalVault) {
+      fetchPersonalDocs();
+    }
+  }, [showPersonalVault, fetchPersonalDocs]);
 
   async function handleUpload() {
     if (!selectedFile) {
@@ -146,6 +177,31 @@ function KnowledgeSidebar({
         error instanceof RoomApiError
           ? error.message
           : "Upload or indexing failed for this room.",
+      );
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleImportFromVault(doc: any) {
+    setUploading(true);
+    setDocumentsError(null);
+    try {
+      // Fetch the file from Cloudinary URL
+      const response = await fetch(doc.url);
+      const blob = await response.blob();
+      const fileName = doc.name || doc.filename || "vault-import.pdf";
+      const file = new File([blob], fileName, { type: blob.type || "application/pdf" });
+
+      const uploadedDocument = await uploadRoomDocumentApi(room.roomId, file, actor);
+      await processRoomDocumentApi(room.roomId, uploadedDocument.document_id, currentUserId);
+      await refreshDocuments();
+      setShowPersonalVault(false);
+    } catch (error) {
+      setDocumentsError(
+        error instanceof RoomApiError
+          ? error.message
+          : "Failed to import from your personal vault. Check if the file is still available.",
       );
     } finally {
       setUploading(false);
@@ -193,36 +249,91 @@ function KnowledgeSidebar({
               Feed the room
             </h4>
             <p className="text-sm leading-6 text-muted-foreground">
-              Upload PDFs or notes so the room assistant can answer with grounded context.
+              Upload from local PC or choose from your personal vault.
             </p>
           </div>
 
-          <Input
-            type="file"
-            accept="application/pdf"
-            onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-            className="file:mr-4 file:rounded-full file:border-0 file:bg-accent file:px-4 file:py-2 file:text-sm file:font-semibold file:text-accent-foreground"
-          />
+          {!showPersonalVault ? (
+            <div className="space-y-4 animate-in fade-in duration-300">
+              <Input
+                type="file"
+                accept="application/pdf"
+                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+                className="file:mr-4 file:rounded-full file:border-0 file:bg-accent file:px-4 file:py-2 file:text-sm file:font-semibold file:text-accent-foreground"
+              />
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Button variant="dark" onClick={handleUpload} disabled={uploading}>
-              {uploading ? (
-                <>
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                  Uploading
-                </>
-              ) : (
-                <>
-                  <FileUp className="h-4 w-4" />
-                  Upload PDF
-                </>
-              )}
-            </Button>
-            <Button variant="outline" onClick={() => void refreshDocuments()} disabled={documentsLoading}>
-              <RefreshCw className={cn("h-4 w-4", documentsLoading && "animate-spin")} />
-              Refresh
-            </Button>
-          </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Button variant="dark" onClick={handleUpload} disabled={uploading} className="flex-1">
+                  {uploading ? (
+                    <>
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                      Uploading
+                    </>
+                  ) : (
+                    <>
+                      <FileUp className="h-4 w-4" />
+                      Upload PDF
+                    </>
+                  )}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowPersonalVault(true)}
+                  disabled={uploading}
+                >
+                  <Library className="h-4 w-4" />
+                  My Documents
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3 animate-in slide-in-from-right-2 duration-300">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Select from Personal Vault
+                </p>
+                <Button variant="ghost" size="sm" onClick={() => setShowPersonalVault(false)} className="h-7 px-2 text-xs">
+                  Back to local upload
+                </Button>
+              </div>
+              
+              <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                {vaultLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <LoaderCircle className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : personalDocs.length > 0 ? (
+                  personalDocs.map((doc, idx) => (
+                    <button
+                      key={doc.url || idx}
+                      onClick={() => handleImportFromVault(doc)}
+                      disabled={uploading}
+                      className="w-full flex items-center gap-3 rounded-[1rem] border border-border/70 bg-secondary/20 p-3 text-left transition-colors hover:bg-secondary/40 disabled:opacity-50"
+                    >
+                      <div className="bg-primary/10 p-2 rounded-lg shrink-0">
+                        <FileText className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground truncate">{doc.name || doc.filename}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-tight">
+                          {doc.format || "PDF"} • {doc.date || "Personal Vault"}
+                        </p>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="text-center py-8 bg-secondary/10 rounded-xl border border-dashed border-border/70">
+                    <p className="text-xs text-muted-foreground">No personal documents found.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <Button variant="outline" onClick={() => void refreshDocuments()} disabled={documentsLoading} className="w-full">
+            <RefreshCw className={cn("h-4 w-4", documentsLoading && "animate-spin")} />
+            Refresh Indexed Documents
+          </Button>
 
           {documentsError ? (
             <div className="rounded-[1rem] border border-destructive/25 bg-[#fff1ed] px-4 py-3 text-sm leading-6 text-destructive">
