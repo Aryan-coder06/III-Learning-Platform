@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, XCircle, Sparkles } from "lucide-react";
 
 import {
@@ -20,18 +20,18 @@ export function SessionProgressWidget() {
   const [updates, setUpdates] = useState<ApiProgressUpdate[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     try {
       const list = await listMyProgressUpdatesApi(actor.userId, "suggested");
       setUpdates(list);
     } catch {
       setUpdates([]);
     }
-  }
+  }, [actor.userId]);
 
   useEffect(() => {
     void refresh();
-  }, [actor.userId]);
+  }, [refresh]);
 
   async function decide(progressUpdateId: string, decision: "accepted" | "rejected") {
     setBusyId(progressUpdateId);
